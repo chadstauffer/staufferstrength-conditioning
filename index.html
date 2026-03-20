@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Strong City S&C — Workout Tracker v2</title>
+    <title>Stauffer Strength & Conditioning — Workout Tracker</title>
     <link
       href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap"
       rel="stylesheet"
@@ -988,7 +988,9 @@
         justify-content: center;
         opacity: 0;
         visibility: hidden;
-        transition: opacity 0.2s, visibility 0.2s;
+        transition:
+          opacity 0.2s,
+          visibility 0.2s;
       }
       .wod-modal-overlay.open {
         opacity: 1;
@@ -1448,14 +1450,24 @@
     </div>
 
     <!-- WOD Modal Overlay -->
-    <div class="wod-modal-overlay" id="wod-modal-overlay" onclick="if(event.target===this)closeWodModal()">
+    <div
+      class="wod-modal-overlay"
+      id="wod-modal-overlay"
+      onclick="if (event.target === this) closeWodModal();"
+    >
       <div class="wod-modal" role="dialog" aria-modal="true" id="wod-modal">
         <div class="wod-modal-hdr">
           <div>
             <div class="wod-modal-title" id="wod-modal-title"></div>
             <div class="wod-modal-sub" id="wod-modal-sub"></div>
           </div>
-          <button class="wod-modal-close" onclick="closeWodModal()" aria-label="Close">&times;</button>
+          <button
+            class="wod-modal-close"
+            onclick="closeWodModal()"
+            aria-label="Close"
+          >
+            &times;
+          </button>
         </div>
         <div class="wod-modal-body" id="wod-modal-body"></div>
       </div>
@@ -1463,7 +1475,9 @@
 
     <!-- Standalone WOD View -->
     <div class="wod-standalone-wrap" id="wod-standalone-wrap">
-      <div class="wod-standalone-back" onclick="exitStandalone()">&larr; Back to WOD</div>
+      <div class="wod-standalone-back" onclick="exitStandalone()">
+        &larr; Back to WOD
+      </div>
       <div class="wod-standalone-card" id="wod-standalone-card"></div>
     </div>
 
@@ -4939,8 +4953,9 @@ All cycle percentages based on this number.`,
         const log = gl()[lk];
 
         document.getElementById("wod-modal-title").textContent = day.d;
-        document.getElementById("wod-modal-sub").textContent =
-          weekLabel ? weekLabel.replace("Week of ", "Week of ") : "";
+        document.getElementById("wod-modal-sub").textContent = weekLabel
+          ? weekLabel.replace("Week of ", "Week of ")
+          : "";
 
         let body = renderDayCard(day, null, log, m, { lk, pfx: "m-" });
         body += `<button class="wod-modal-standalone-btn" onclick="enterStandalone('${lk}')">View Standalone →</button>`;
@@ -4954,31 +4969,24 @@ All cycle percentages based on this number.`,
         // Focus first focusable element
         const modal = document.getElementById("wod-modal");
         setTimeout(() => {
-          const fc =
-            modal.querySelector("button, input, textarea, [tabindex]");
+          const fc = modal.querySelector("button, input, textarea, [tabindex]");
           if (fc) fc.focus();
         }, 50);
       }
 
       function closeWodModal() {
-        document
-          .getElementById("wod-modal-overlay")
-          .classList.remove("open");
+        document.getElementById("wod-modal-overlay").classList.remove("open");
         document.body.style.overflow = "";
         _modalLk = null;
       }
 
       // Prefix-aware helpers for modal/standalone log forms
       function tlfCtx(k, pfx) {
-        document
-          .getElementById((pfx || "") + "f-" + k)
-          .classList.toggle("hid");
+        document.getElementById((pfx || "") + "f-" + k).classList.toggle("hid");
       }
       function svCtx(k, pfx) {
         const score = document.getElementById(pfx + "sc-" + k).value.trim();
-        const weight = document
-          .getElementById(pfx + "wt-" + k)
-          .value.trim();
+        const weight = document.getElementById(pfx + "wt-" + k).value.trim();
         const notes = document.getElementById(pfx + "nt-" + k).value.trim();
         const pr = document.getElementById(pfx + "pr-" + k).checked;
         const date = new Date().toLocaleDateString("en-US", {
@@ -5067,9 +5075,7 @@ All cycle percentages based on this number.`,
 
         // Show standalone
         renderStandaloneContent(lk);
-        document
-          .getElementById("wod-standalone-wrap")
-          .classList.add("on");
+        document.getElementById("wod-standalone-wrap").classList.add("on");
 
         // Push hash
         history.pushState(null, "", "#wod/" + encodeURIComponent(lk));
@@ -5078,9 +5084,7 @@ All cycle percentages based on this number.`,
 
       function exitStandalone() {
         _standaloneLk = null;
-        document
-          .getElementById("wod-standalone-wrap")
-          .classList.remove("on");
+        document.getElementById("wod-standalone-wrap").classList.remove("on");
 
         // Restore header, tabs, active panel
         document.querySelector("header").style.display = "";
@@ -5118,11 +5122,7 @@ All cycle percentages based on this number.`,
 
       // Day card click → open modal (event delegation)
       document.getElementById("mc").addEventListener("click", function (evt) {
-        if (
-          evt.target.closest(
-            "button, input, textarea, label, a, .lt, .lf",
-          )
-        )
+        if (evt.target.closest("button, input, textarea, label, a, .lt, .lf"))
           return;
         const dc = evt.target.closest(".dc[data-lk]");
         if (dc) openWodModal(dc.dataset.lk);
