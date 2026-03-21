@@ -8,6 +8,7 @@
       href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap"
       rel="stylesheet"
     />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.7/chart.umd.min.js"></script>
     <style>
       *,
       *::before,
@@ -167,6 +168,123 @@
         border-radius: 2px;
       }
 
+      /* ====== DASHBOARD PANEL ====== */
+      .dash-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+      }
+      .dash-card {
+        background: var(--s1);
+        border: 1px solid var(--br);
+        border-radius: 4px;
+        padding: 18px;
+        min-height: 0;
+      }
+      .dash-card.full { grid-column: 1 / -1; }
+      .dash-card-title {
+        font-family: var(--disp);
+        font-size: 13px;
+        letter-spacing: 3px;
+        color: var(--mu);
+        text-transform: uppercase;
+        margin-bottom: 12px;
+      }
+      .dash-ring-wrap {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 32px;
+        flex-wrap: wrap;
+      }
+      .dash-ring-chart { position: relative; width: 200px; height: 200px; }
+      .dash-ring-center {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        pointer-events: none;
+      }
+      .dash-ring-pct {
+        font-family: var(--disp);
+        font-size: 48px;
+        color: var(--tx);
+        line-height: 1;
+      }
+      .dash-ring-label {
+        font-family: var(--mono);
+        font-size: 9px;
+        letter-spacing: 2px;
+        color: var(--mu);
+        text-transform: uppercase;
+      }
+      .dash-ring-legend {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .dash-ring-legend-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-family: var(--mono);
+        font-size: 10px;
+        color: var(--mu);
+      }
+      .dash-ring-legend-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 2px;
+        flex-shrink: 0;
+      }
+      .dash-ring-legend-item strong {
+        color: var(--tx);
+        font-weight: 500;
+        min-width: 24px;
+        text-align: right;
+      }
+      .dash-streak-row {
+        display: flex;
+        gap: 24px;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+      .dash-streak-item { text-align: center; }
+      .dash-streak-num {
+        font-family: var(--disp);
+        font-size: 44px;
+        color: var(--ac);
+        line-height: 1;
+      }
+      .dash-streak-sub {
+        font-family: var(--mono);
+        font-size: 9px;
+        letter-spacing: 2px;
+        color: var(--mu);
+        text-transform: uppercase;
+      }
+      .dash-bw-delta {
+        font-family: var(--mono);
+        font-size: 11px;
+        color: var(--ac);
+        text-align: center;
+        margin-top: 8px;
+      }
+      .dash-chart-wrap { position: relative; width: 100%; }
+      .dash-chart-wrap canvas { width: 100% !important; }
+      .dash-pr-empty, .dash-bw-empty {
+        font-family: var(--mono);
+        font-size: 10px;
+        color: var(--br);
+        text-align: center;
+        padding: 24px 0;
+      }
+      @media (max-width: 800px) {
+        .dash-grid { grid-template-columns: 1fr; }
+        .dash-ring-wrap { flex-direction: column; }
+      }
       /* ====== ARCHIVE PANEL ====== */
       .archive-layout {
         display: grid;
@@ -242,7 +360,7 @@
       }
       .sg {
         display: grid;
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: 1fr 1fr 1fr;
         gap: 1px;
         background: var(--br);
       }
@@ -558,6 +676,361 @@
         border-radius: 2px;
         margin-left: 2px;
       }
+      /* Status toggle row */
+      .status-row {
+        display: flex;
+        gap: 4px;
+        margin-top: 8px;
+        margin-bottom: 2px;
+      }
+      .status-btn {
+        font-family: var(--mono);
+        font-size: 8px;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        padding: 3px 8px;
+        border: 1px solid var(--br);
+        border-radius: 2px;
+        background: transparent;
+        color: var(--mu);
+        cursor: pointer;
+        transition: all 0.12s;
+      }
+      .status-btn:hover { border-color: var(--mu); color: var(--tx); }
+      .status-btn.active-done {
+        background: var(--ac);
+        color: #000;
+        border-color: var(--ac);
+      }
+      .status-btn.active-missed {
+        background: #c0392b;
+        color: #fff;
+        border-color: #c0392b;
+      }
+      .status-btn.active-skipped {
+        background: #555;
+        color: #ccc;
+        border-color: #555;
+      }
+      /* Card state treatments */
+      .dc.st-missed {
+        opacity: 0.55;
+        border-left: 3px solid #c0392b;
+      }
+      .dc.st-skipped {
+        opacity: 0.4;
+      }
+      .dc.st-skipped .ww {
+        text-decoration: line-through;
+        text-decoration-color: var(--mu);
+      }
+      .dc.st-done {
+        border-left: 3px solid var(--ac);
+      }
+      /* Status badge on day label */
+      .missed-badge {
+        display: inline-block;
+        background: #c0392b;
+        color: #fff;
+        font-family: var(--mono);
+        font-size: 7px;
+        padding: 1px 4px;
+        border-radius: 2px;
+        margin-left: 3px;
+        letter-spacing: 1px;
+      }
+      .skipped-badge {
+        display: inline-block;
+        background: #555;
+        color: #ccc;
+        font-family: var(--mono);
+        font-size: 7px;
+        padding: 1px 4px;
+        border-radius: 2px;
+        margin-left: 3px;
+        letter-spacing: 1px;
+      }
+      /* WOD Swap */
+      .swap-badge {
+        display: inline-block;
+        background: var(--ac3);
+        color: #000;
+        font-family: var(--mono);
+        font-size: 7px;
+        padding: 1px 4px;
+        border-radius: 2px;
+        margin-left: 3px;
+        letter-spacing: 1px;
+      }
+      .dc.st-swapped { border-left: 3px solid var(--ac3); }
+      .swap-info {
+        font-family: var(--mono);
+        font-size: 9px;
+        color: var(--ac3);
+        margin-bottom: 4px;
+      }
+      .swap-toggle {
+        font-family: var(--mono);
+        font-size: 8px;
+        letter-spacing: 1px;
+        color: var(--mu);
+        cursor: pointer;
+        border: none;
+        background: none;
+        padding: 2px 0;
+        text-transform: uppercase;
+        transition: color 0.12s;
+      }
+      .swap-toggle:hover { color: var(--tx); }
+      .swap-original {
+        margin-top: 4px;
+        padding: 8px 10px;
+        background: var(--bg);
+        border: 1px dashed var(--br);
+        border-radius: 3px;
+      }
+      .swap-original-label {
+        font-family: var(--mono);
+        font-size: 8px;
+        letter-spacing: 1px;
+        color: var(--mu);
+        text-transform: uppercase;
+        margin-bottom: 4px;
+      }
+      .swap-original .ww {
+        font-size: 9.5px;
+        color: var(--mu);
+      }
+      .swap-undo {
+        font-family: var(--mono);
+        font-size: 8px;
+        letter-spacing: 1px;
+        color: #c0392b;
+        cursor: pointer;
+        border: 1px solid #c0392b;
+        background: none;
+        padding: 2px 6px;
+        border-radius: 2px;
+        margin-left: 6px;
+        transition: all 0.12s;
+      }
+      .swap-undo:hover { background: #c0392b; color: #fff; }
+      .swap-btn-impl {
+        font-family: var(--mono);
+        font-size: 8px;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        padding: 4px 8px;
+        background: var(--ac3);
+        color: #000;
+        border: none;
+        border-radius: 2px;
+        cursor: pointer;
+        transition: all 0.12s;
+        margin-top: 6px;
+      }
+      .swap-btn-impl:hover { background: #7bc0e8; }
+      /* Swap modal */
+      .swap-modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.7);
+        backdrop-filter: blur(6px);
+        z-index: 500;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s;
+      }
+      .swap-modal-overlay.open { opacity: 1; pointer-events: auto; }
+      .swap-modal {
+        background: var(--s1);
+        border: 1px solid var(--br);
+        border-radius: 6px;
+        padding: 24px 28px;
+        max-width: 500px;
+        width: 92%;
+        max-height: 85vh;
+        overflow-y: auto;
+      }
+      .swap-modal h3 {
+        font-family: var(--disp);
+        font-size: 20px;
+        letter-spacing: 3px;
+        color: var(--ac3);
+        margin-bottom: 14px;
+      }
+      .swap-modal-section {
+        margin-bottom: 14px;
+      }
+      .swap-modal-section-label {
+        font-family: var(--mono);
+        font-size: 8px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: var(--mu);
+        margin-bottom: 4px;
+      }
+      .swap-modal-wod-preview {
+        background: var(--s2);
+        border: 1px solid var(--br);
+        border-radius: 4px;
+        padding: 10px 12px;
+        font-family: var(--mono);
+        font-size: 10px;
+        color: var(--tx);
+        line-height: 1.6;
+        white-space: pre-line;
+      }
+      .swap-modal-wod-preview .wn { margin-bottom: 4px; }
+      .swap-day-picker {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+      .swap-day-option {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 10px;
+        background: var(--s2);
+        border: 1px solid var(--br);
+        border-radius: 3px;
+        cursor: pointer;
+        transition: all 0.12s;
+      }
+      .swap-day-option:hover { border-color: var(--ac3); }
+      .swap-day-option.selected { border-color: var(--ac3); background: rgba(79,163,224,0.08); }
+      .swap-day-option input[type="radio"] { accent-color: var(--ac3); }
+      .swap-day-date {
+        font-family: var(--mono);
+        font-size: 10px;
+        color: var(--tx);
+      }
+      .swap-day-wod {
+        font-family: var(--mono);
+        font-size: 8px;
+        color: var(--mu);
+        flex: 1;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .swap-modal-actions {
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
+        margin-top: 16px;
+      }
+      .cal-dot.cal-swapped {
+        background: var(--ac3);
+        box-shadow: inset 0 0 0 2px var(--s1);
+        cursor: pointer;
+      }
+      .cal-dot.cal-swapped:hover {
+        background: #7bc0e8;
+      }
+      /* Schedule Forward */
+      .sched-date {
+        font-family: var(--mono);
+        font-size: 10px;
+        letter-spacing: 1px;
+        color: var(--ac3);
+        margin-bottom: 4px;
+        font-weight: 500;
+      }
+      .orig-date {
+        font-family: var(--mono);
+        font-size: 8px;
+        color: var(--mu);
+        margin-bottom: 6px;
+      }
+      .sched-badge {
+        display: inline-block;
+        background: var(--ac3);
+        color: #000;
+        font-family: var(--mono);
+        font-size: 7px;
+        padding: 1px 4px;
+        border-radius: 2px;
+        margin-left: 3px;
+        letter-spacing: 1px;
+      }
+      .sched-dialog-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(6px);
+        z-index: 500;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s;
+      }
+      .sched-dialog-overlay.open {
+        opacity: 1;
+        pointer-events: auto;
+      }
+      .sched-dialog {
+        background: var(--s1);
+        border: 1px solid var(--br);
+        border-radius: 6px;
+        padding: 28px 32px;
+        max-width: 420px;
+        width: 90%;
+      }
+      .sched-dialog h3 {
+        font-family: var(--disp);
+        font-size: 22px;
+        letter-spacing: 3px;
+        color: var(--ac3);
+        margin-bottom: 14px;
+      }
+      .sched-dialog p {
+        font-family: var(--body);
+        font-size: 13px;
+        color: var(--tx);
+        line-height: 1.7;
+        margin-bottom: 10px;
+      }
+      .sched-dialog .sched-summary {
+        background: var(--s2);
+        border: 1px solid var(--br);
+        border-radius: 4px;
+        padding: 12px 14px;
+        margin: 14px 0;
+        font-family: var(--mono);
+        font-size: 10px;
+        line-height: 2;
+        color: var(--mu);
+      }
+      .sched-dialog .sched-summary strong {
+        color: var(--tx);
+      }
+      .sched-dialog .sched-actions {
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
+        margin-top: 18px;
+      }
+      .sb-sched-btn {
+        width: 100%;
+        padding: 8px 0;
+        font-size: 9px;
+        letter-spacing: 2px;
+        margin: 0;
+      }
+      .sched-clear-btn {
+        width: 100%;
+        padding: 6px 0;
+        font-size: 8px;
+        letter-spacing: 1px;
+        margin-top: 4px;
+      }
       /* Implement tags */
       .impl-tag {
         display: inline-block;
@@ -806,20 +1279,63 @@
         transition: background 0.12s;
       }
       .cal-dot.has-wod {
-        background: rgba(232, 200, 64, 0.25);
+        background: var(--br);
+        box-shadow: inset 0 0 0 1.5px rgba(232, 200, 64, 0.6);
         cursor: pointer;
       }
       .cal-dot.has-wod:hover {
-        background: rgba(232, 200, 64, 0.5);
+        box-shadow: inset 0 0 0 1.5px rgba(232, 200, 64, 0.9);
       }
-      .cal-dot.logged {
+      .cal-dot.cal-done {
         background: var(--ac);
+        cursor: pointer;
       }
-      .cal-dot.logged:hover {
+      .cal-dot.cal-done:hover {
         background: #f5d44a;
+      }
+      .cal-dot.cal-missed {
+        background: #c0392b;
+        cursor: pointer;
+      }
+      .cal-dot.cal-missed:hover {
+        background: #e74c3c;
+      }
+      .cal-dot.cal-skipped {
+        background: #555;
+        cursor: pointer;
+      }
+      .cal-dot.cal-skipped:hover {
+        background: #777;
       }
       .cal-dot.empty {
         background: transparent;
+      }
+      .cal-week-summary {
+        font-family: var(--mono);
+        font-size: 9px;
+        color: var(--mu);
+        padding: 6px 10px;
+        background: var(--s2);
+        border: 1px solid var(--br);
+        border-radius: 3px;
+        margin-bottom: 6px;
+        line-height: 1.7;
+      }
+      .cal-week-summary strong {
+        color: var(--tx);
+      }
+      .cal-week-summary .cws-done { color: var(--ac); }
+      .cal-week-summary .cws-missed { color: #c0392b; }
+      .cal-week-summary .cws-skipped { color: #777; }
+      .cal-summaries {
+        margin-bottom: 20px;
+      }
+      .cal-summaries-title {
+        font-family: var(--disp);
+        font-size: 16px;
+        letter-spacing: 3px;
+        color: var(--tx);
+        margin-bottom: 8px;
       }
       .cal-legend {
         display: flex;
@@ -839,6 +1355,197 @@
         width: 10px;
         height: 10px;
         border-radius: 2px;
+      }
+      /* ====== STATS PANEL ====== */
+      .stats-layout {
+        max-width: 800px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+      .stats-goal-banner {
+        background: var(--s1);
+        border: 1px solid var(--br);
+        border-radius: 4px;
+        padding: 18px 22px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        flex-wrap: wrap;
+      }
+      .stats-goal-banner .sgb-title {
+        font-family: var(--disp);
+        font-size: 14px;
+        letter-spacing: 3px;
+        color: var(--ac);
+      }
+      .stats-goal-banner .sgb-nums {
+        display: flex;
+        gap: 20px;
+        align-items: baseline;
+      }
+      .stats-goal-banner .sgb-item {
+        text-align: center;
+      }
+      .stats-goal-banner .sgb-val {
+        font-family: var(--disp);
+        font-size: 28px;
+        letter-spacing: 1px;
+        line-height: 1;
+      }
+      .stats-goal-banner .sgb-label {
+        font-family: var(--mono);
+        font-size: 8px;
+        letter-spacing: 2px;
+        color: var(--mu);
+        text-transform: uppercase;
+      }
+      .stats-goal-banner .sgb-remaining {
+        color: var(--ac);
+      }
+      .stats-goal-banner .sgb-reached {
+        color: #27ae60;
+      }
+      .stats-goal-set {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .stats-goal-set label {
+        font-family: var(--mono);
+        font-size: 9px;
+        letter-spacing: 1px;
+        color: var(--mu);
+      }
+      .stats-goal-set input {
+        width: 70px;
+        background: var(--bg);
+        border: 1px solid var(--br);
+        border-radius: 3px;
+        padding: 4px 6px;
+        color: var(--tx);
+        font-family: var(--mono);
+        font-size: 11px;
+        outline: none;
+      }
+      .stats-goal-set input:focus { border-color: var(--ac); }
+      .stats-chart-wrap {
+        background: var(--s1);
+        border: 1px solid var(--br);
+        border-radius: 4px;
+        padding: 16px;
+      }
+      .stats-chart-wrap canvas {
+        width: 100% !important;
+        max-height: 260px;
+      }
+      .stats-form {
+        background: var(--s1);
+        border: 1px solid var(--br);
+        border-radius: 4px;
+        padding: 14px 16px;
+        display: flex;
+        gap: 8px;
+        align-items: flex-end;
+        flex-wrap: wrap;
+      }
+      .stats-form .sf-group {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+      }
+      .stats-form .sf-label {
+        font-family: var(--mono);
+        font-size: 8px;
+        letter-spacing: 1px;
+        color: var(--mu);
+        text-transform: uppercase;
+      }
+      .stats-form .sf-input {
+        background: var(--bg);
+        border: 1px solid var(--br);
+        border-radius: 3px;
+        padding: 6px 8px;
+        color: var(--tx);
+        font-family: var(--mono);
+        font-size: 11px;
+        outline: none;
+        width: 100%;
+      }
+      .stats-form .sf-input:focus { border-color: var(--ac); }
+      .stats-form .sf-notes { min-width: 160px; flex: 1; }
+      .stats-log {
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+        background: var(--br);
+        border: 1px solid var(--br);
+        border-radius: 4px;
+        overflow: hidden;
+        max-height: 480px;
+        overflow-y: auto;
+      }
+      .stats-entry {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 14px;
+        background: var(--s1);
+      }
+      .stats-entry:hover { background: var(--s2); }
+      .se-date {
+        font-family: var(--mono);
+        font-size: 9px;
+        letter-spacing: 1px;
+        color: var(--mu);
+        min-width: 80px;
+      }
+      .se-weight {
+        font-family: var(--disp);
+        font-size: 20px;
+        color: var(--tx);
+        letter-spacing: 1px;
+        min-width: 70px;
+      }
+      .se-weight span {
+        font-family: var(--mono);
+        font-size: 9px;
+        color: var(--mu);
+      }
+      .se-bf {
+        font-family: var(--mono);
+        font-size: 10px;
+        color: var(--ac3);
+        min-width: 50px;
+      }
+      .se-notes {
+        font-family: var(--mono);
+        font-size: 9px;
+        color: var(--mu);
+        flex: 1;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .se-del {
+        background: none;
+        border: 1px solid var(--br);
+        border-radius: 2px;
+        color: var(--mu);
+        font-size: 10px;
+        cursor: pointer;
+        padding: 2px 6px;
+        transition: all 0.12s;
+      }
+      .se-del:hover { border-color: #c0392b; color: #c0392b; }
+      .stats-empty {
+        padding: 40px 20px;
+        text-align: center;
+        font-family: var(--disp);
+        font-size: 16px;
+        letter-spacing: 3px;
+        color: var(--br);
       }
       /* ====== CREATE PANEL ====== */
       .create-form {
@@ -1161,7 +1868,10 @@
     </header>
 
     <nav class="tabs" id="tabs">
-      <div class="tab on" data-panel="archive" onclick="showTab(this)">
+      <div class="tab on" data-panel="dashboard" onclick="showTab(this)">
+        <span class="tab-icon">⬡</span>Dashboard
+      </div>
+      <div class="tab" data-panel="archive" onclick="showTab(this)">
         <span class="tab-icon">◈</span>WOD
       </div>
       <div class="tab" data-panel="implements" onclick="showTab(this)">
@@ -1169,6 +1879,9 @@
       </div>
       <div class="tab" data-panel="benchmarks" onclick="showTab(this)">
         <span class="tab-icon">★</span>Benchmarks
+      </div>
+      <div class="tab" data-panel="stats" onclick="showTab(this)">
+        <span class="tab-icon">◉</span>Stats
       </div>
       <div class="tab" data-panel="calendar" onclick="showTab(this)">
         <span class="tab-icon">▦</span>Calendar
@@ -1178,10 +1891,68 @@
       </div>
     </nav>
 
+    <!-- ===== DASHBOARD PANEL ===== -->
+    <div class="panel on" id="panel-dashboard">
+      <div class="dash-grid">
+        <!-- Completion Ring -->
+        <div class="dash-card">
+          <div class="dash-card-title">Completion</div>
+          <div class="dash-ring-wrap">
+            <div class="dash-ring-chart">
+              <canvas id="dash-ring"></canvas>
+              <div class="dash-ring-center">
+                <div class="dash-ring-pct" id="dash-ring-pct">0%</div>
+                <div class="dash-ring-label">Complete</div>
+              </div>
+            </div>
+            <div class="dash-ring-legend" id="dash-ring-legend"></div>
+          </div>
+        </div>
+        <!-- Streak Counter -->
+        <div class="dash-card">
+          <div class="dash-card-title">Streaks</div>
+          <div class="dash-streak-row" id="dash-streaks"></div>
+        </div>
+        <!-- Weekly Volume -->
+        <div class="dash-card full">
+          <div class="dash-card-title">Weekly Volume — Last 8 Weeks</div>
+          <div class="dash-chart-wrap" style="height:180px">
+            <canvas id="dash-weekly"></canvas>
+          </div>
+        </div>
+        <!-- Bodyweight Trend -->
+        <div class="dash-card">
+          <div class="dash-card-title">Bodyweight Trend</div>
+          <div class="dash-chart-wrap" style="height:170px">
+            <canvas id="dash-bw"></canvas>
+          </div>
+          <div id="dash-bw-delta"></div>
+        </div>
+        <!-- Implement Breakdown -->
+        <div class="dash-card">
+          <div class="dash-card-title">Implement Breakdown</div>
+          <div class="dash-chart-wrap" style="height:200px">
+            <canvas id="dash-impl"></canvas>
+          </div>
+        </div>
+        <!-- PR Timeline -->
+        <div class="dash-card full">
+          <div class="dash-card-title">PR Timeline</div>
+          <div class="dash-chart-wrap" style="height:120px">
+            <canvas id="dash-pr"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- ===== ARCHIVE PANEL ===== -->
-    <div class="panel on" id="panel-archive">
+    <div class="panel" id="panel-archive">
       <div class="archive-layout">
         <aside class="sb">
+          <div class="sbs" style="padding:10px 13px;display:flex;flex-direction:column;gap:4px">
+            <button class="btn ba sb-sched-btn" onclick="scheduleForwardPrompt()">▶ Schedule Forward</button>
+            <button class="btn bg sched-clear-btn" id="sched-clear-btn" style="display:none" onclick="clearSchedule()">✕ Clear Schedule</button>
+          </div>
           <div class="sbs">
             <div class="sbl">Stats</div>
             <div class="sg">
@@ -1194,8 +1965,16 @@
                 <div class="sl">WODs</div>
               </div>
               <div class="sb-box">
-                <div class="sn" id="sL">0</div>
-                <div class="sl">Logged</div>
+                <div class="sn" style="color:var(--ac)" id="sDone">0</div>
+                <div class="sl">Done</div>
+              </div>
+              <div class="sb-box">
+                <div class="sn" style="color:#c0392b" id="sMissed">0</div>
+                <div class="sl">Missed</div>
+              </div>
+              <div class="sb-box">
+                <div class="sn" style="color:#777" id="sSkip">0</div>
+                <div class="sl">Skipped</div>
               </div>
               <div class="sb-box">
                 <div class="sn" id="sP">0</div>
@@ -1280,15 +2059,28 @@
     <div class="panel" id="panel-calendar">
       <div class="cal-legend">
         <div class="cal-legend-item">
-          <div
-            class="cal-legend-dot"
-            style="background: rgba(232, 200, 64, 0.25)"
-          ></div>
-          WOD in archive
+          <div class="cal-legend-dot" style="background: var(--ac)"></div>
+          Done
         </div>
         <div class="cal-legend-item">
-          <div class="cal-legend-dot" style="background: var(--ac)"></div>
-          You logged it
+          <div class="cal-legend-dot" style="background: #c0392b"></div>
+          Missed
+        </div>
+        <div class="cal-legend-item">
+          <div class="cal-legend-dot" style="background: #555"></div>
+          Skipped
+        </div>
+        <div class="cal-legend-item">
+          <div class="cal-legend-dot" style="background: var(--br); box-shadow: inset 0 0 0 1.5px rgba(232, 200, 64, 0.6)"></div>
+          Scheduled — no status
+        </div>
+        <div class="cal-legend-item">
+          <div class="cal-legend-dot" style="background: var(--ac3); box-shadow: inset 0 0 0 2px var(--s1)"></div>
+          Swapped
+        </div>
+        <div class="cal-legend-item">
+          <div class="cal-legend-dot" style="background: var(--br); outline: 2px solid var(--ac3); outline-offset: -1px"></div>
+          Today
         </div>
         <div class="cal-legend-item">
           <div class="cal-legend-dot" style="background: var(--br)"></div>
@@ -1296,6 +2088,63 @@
         </div>
       </div>
       <div id="cal-container"></div>
+    </div>
+
+    <!-- ===== STATS PANEL ===== -->
+    <div class="panel" id="panel-stats">
+      <div class="stats-layout">
+        <!-- Goal banner -->
+        <div class="stats-goal-banner" id="stats-goal-banner">
+          <div>
+            <div class="sgb-title">Body Composition Goal</div>
+            <div style="font-family:var(--mono);font-size:9px;color:var(--mu);margin-top:2px">Lose 10 lbs body fat · Maintain muscle</div>
+          </div>
+          <div class="sgb-nums">
+            <div class="sgb-item">
+              <div class="sgb-val" id="sgb-current">—</div>
+              <div class="sgb-label">Current</div>
+            </div>
+            <div class="sgb-item">
+              <div class="sgb-val" style="color:var(--mu)" id="sgb-goal">—</div>
+              <div class="sgb-label">Goal</div>
+            </div>
+            <div class="sgb-item">
+              <div class="sgb-val sgb-remaining" id="sgb-remain">—</div>
+              <div class="sgb-label">Lbs to go</div>
+            </div>
+          </div>
+          <div class="stats-goal-set">
+            <label>Goal wt:</label>
+            <input type="number" id="stats-goal-input" placeholder="lbs" step="0.1" onchange="saveStatsGoal()">
+          </div>
+        </div>
+        <!-- Chart -->
+        <div class="stats-chart-wrap">
+          <canvas id="stats-chart"></canvas>
+        </div>
+        <!-- Entry form -->
+        <div class="stats-form">
+          <div class="sf-group">
+            <div class="sf-label">Date</div>
+            <input type="date" class="sf-input" id="stat-date" style="width:130px">
+          </div>
+          <div class="sf-group">
+            <div class="sf-label">Weight (lbs)</div>
+            <input type="number" class="sf-input" id="stat-weight" placeholder="185" step="0.1" style="width:90px">
+          </div>
+          <div class="sf-group">
+            <div class="sf-label">Body Fat %</div>
+            <input type="number" class="sf-input" id="stat-bf" placeholder="opt." step="0.1" style="width:80px">
+          </div>
+          <div class="sf-group sf-notes">
+            <div class="sf-label">Notes</div>
+            <input type="text" class="sf-input" id="stat-notes" placeholder="Sleep, energy, stress…">
+          </div>
+          <button class="btn ba" onclick="addStatEntry()">+ Log</button>
+        </div>
+        <!-- Log entries -->
+        <div id="stats-log-container"></div>
+      </div>
     </div>
 
     <!-- ===== CREATE PANEL ===== -->
@@ -1479,6 +2328,42 @@
         &larr; Back to WOD
       </div>
       <div class="wod-standalone-card" id="wod-standalone-card"></div>
+    </div>
+
+    <!-- Schedule Forward Confirmation Dialog -->
+    <div class="sched-dialog-overlay" id="sched-overlay">
+      <div class="sched-dialog">
+        <h3>Schedule Forward</h3>
+        <p>This will assign future weekday dates to every archived workout, starting from the Monday of next week.</p>
+        <div class="sched-summary" id="sched-summary"></div>
+        <div class="sched-actions">
+          <button class="btn bg" onclick="closeSchedDialog()">Cancel</button>
+          <button class="btn ba" onclick="confirmScheduleForward()">Confirm</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Swap WOD Modal -->
+    <div class="swap-modal-overlay" id="swap-overlay">
+      <div class="swap-modal">
+        <h3>Swap WOD</h3>
+        <div class="swap-modal-section">
+          <div class="swap-modal-section-label">Replacement WOD</div>
+          <div class="swap-modal-wod-preview" id="swap-replacement-preview"></div>
+        </div>
+        <div class="swap-modal-section">
+          <div class="swap-modal-section-label">Swap into which day?</div>
+          <div class="swap-day-picker" id="swap-day-picker"></div>
+        </div>
+        <div class="swap-modal-section" id="swap-original-section" style="display:none">
+          <div class="swap-modal-section-label">Currently scheduled</div>
+          <div class="swap-modal-wod-preview" id="swap-original-preview"></div>
+        </div>
+        <div class="swap-modal-actions">
+          <button class="btn bg" onclick="closeSwapModal()">Cancel</button>
+          <button class="btn ba" style="background:var(--ac3)" onclick="confirmSwap()">Swap for This Day</button>
+        </div>
+      </div>
     </div>
 
     <script>
@@ -4326,6 +5211,637 @@ All cycle percentages based on this number.`,
       }
 
       // ============================
+      // SCHEDULE FORWARD
+      // ============================
+      function getSchedule() {
+        try {
+          return JSON.parse(localStorage.getItem("scsc_schedule") || "{}");
+        } catch {
+          return {};
+        }
+      }
+      function saveSchedule(map) {
+        localStorage.setItem("scsc_schedule", JSON.stringify(map));
+      }
+      function clearSchedule() {
+        localStorage.removeItem("scsc_schedule");
+        updateSchedClearBtn();
+        render();
+      }
+      function updateSchedClearBtn() {
+        const btn = document.getElementById("sched-clear-btn");
+        if (btn) btn.style.display = Object.keys(getSchedule()).length ? "" : "none";
+      }
+
+      // Get next Monday from today
+      function getNextMonday() {
+        const now = new Date();
+        const day = now.getDay(); // 0=Sun,1=Mon,...,6=Sat
+        const daysUntilMon = day === 0 ? 1 : 8 - day;
+        const mon = new Date(now.getFullYear(), now.getMonth(), now.getDate() + daysUntilMon);
+        return mon;
+      }
+
+      // Collect all workout days from archive in chronological order (oldest first)
+      function collectAllDays() {
+        const days = [];
+        W.forEach((wk) => {
+          wk.days.forEach((day) => {
+            const lk = `${wk.id}_${day.d}`;
+            days.push({ lk, weekLabel: wk.l, dayName: day.d });
+          });
+        });
+        return days;
+      }
+
+      // Advance date to next weekday (skip Sat/Sun)
+      function nextWeekday(d) {
+        const next = new Date(d);
+        next.setDate(next.getDate() + 1);
+        while (next.getDay() === 0 || next.getDay() === 6) {
+          next.setDate(next.getDate() + 1);
+        }
+        return next;
+      }
+
+      function formatSchedDate(d) {
+        const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+        const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        return `${days[d.getDay()]} ${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+      }
+
+      // Build schedule mapping: { lookupKey: "Mon Mar 24, 2026", ... }
+      function buildScheduleMap() {
+        const allDays = collectAllDays();
+        const map = {};
+        let current = getNextMonday();
+        allDays.forEach((entry, i) => {
+          if (i > 0) current = nextWeekday(current);
+          map[entry.lk] = formatSchedDate(current);
+        });
+        return map;
+      }
+
+      function scheduleForwardPrompt() {
+        const allDays = collectAllDays();
+        if (!allDays.length) return;
+        const startDate = getNextMonday();
+        let endDate = new Date(startDate);
+        for (let i = 1; i < allDays.length; i++) {
+          endDate = nextWeekday(endDate);
+        }
+        const summary = document.getElementById("sched-summary");
+        summary.innerHTML =
+          `<strong>${allDays.length}</strong> workouts will be scheduled<br>` +
+          `<strong>From:</strong> ${formatSchedDate(startDate)}<br>` +
+          `<strong>To:</strong> ${formatSchedDate(endDate)}`;
+        document.getElementById("sched-overlay").classList.add("open");
+      }
+
+      function closeSchedDialog() {
+        document.getElementById("sched-overlay").classList.remove("open");
+      }
+
+      function confirmScheduleForward() {
+        const map = buildScheduleMap();
+        saveSchedule(map);
+        closeSchedDialog();
+        updateSchedClearBtn();
+        render();
+      }
+
+      // ============================
+      // WOD SWAP
+      // ============================
+      function getSwaps() {
+        try { return JSON.parse(localStorage.getItem("scsc_swaps") || "{}"); }
+        catch { return {}; }
+      }
+      function saveSwaps(map) {
+        localStorage.setItem("scsc_swaps", JSON.stringify(map));
+      }
+
+      // Look up a WOD by weekId + dayName from the W array
+      function findWod(weekId, dayName) {
+        for (const wk of W) {
+          if (wk.id === weekId) {
+            for (const day of wk.days) {
+              if (day.d === dayName) return { wk, day };
+            }
+          }
+        }
+        return null;
+      }
+
+      // Get the scheduled lookup key for a given date string (e.g. "2026-03-24")
+      function getSchedLkForDate(dateKey) {
+        const schedMap = getSchedule();
+        for (const [lk, dateStr] of Object.entries(schedMap)) {
+          const parsed = parseSchedDateStr(dateStr);
+          if (parsed && toDateKey(parsed) === dateKey) return { lk, dateStr };
+        }
+        return null;
+      }
+
+      // Get the next 7 scheduled days from today
+      function getUpcomingSchedDays() {
+        const schedMap = getSchedule();
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const entries = [];
+        for (const [lk, dateStr] of Object.entries(schedMap)) {
+          const parsed = parseSchedDateStr(dateStr);
+          if (!parsed) continue;
+          parsed.setHours(0, 0, 0, 0);
+          if (parsed >= today) {
+            entries.push({ lk, dateStr, date: parsed, dateKey: toDateKey(parsed) });
+          }
+        }
+        entries.sort((a, b) => a.date - b.date);
+        return entries.slice(0, 7);
+      }
+
+      let _swapReplacement = null; // {weekId, dayName}
+      let _swapSelectedDateKey = null;
+
+      function openSwapModal(weekId, dayName) {
+        const found = findWod(weekId, dayName);
+        if (!found) return;
+        _swapReplacement = { weekId, dayName };
+        const { day } = found;
+
+        // Replacement preview
+        const prev = document.getElementById("swap-replacement-preview");
+        prev.innerHTML =
+          (day.n ? `<div class="wn">${e(day.n)}</div>` : "") +
+          e((day.w || "").split("\n").slice(0, 5).join("\n"));
+
+        // Day picker
+        const upcoming = getUpcomingSchedDays();
+        const picker = document.getElementById("swap-day-picker");
+        const todayKey = toDateKey(new Date());
+        // Find default selection: today if scheduled, else first upcoming
+        const todayEntry = upcoming.find((e) => e.dateKey === todayKey);
+        _swapSelectedDateKey = todayEntry ? todayKey : (upcoming[0]?.dateKey || null);
+
+        if (!upcoming.length) {
+          picker.innerHTML = '<div style="font-family:var(--mono);font-size:9px;color:var(--br);padding:8px">No upcoming scheduled days — use Schedule Forward first</div>';
+        } else {
+          picker.innerHTML = upcoming.map((ent) => {
+            const parts = ent.lk.split("_");
+            const origDayName = parts.slice(1).join("_");
+            const origWk = findWod(parts[0], origDayName);
+            const snippet = origWk ? (origWk.day.w || "").split("\n")[0].slice(0, 40) : "";
+            const sel = ent.dateKey === _swapSelectedDateKey;
+            return `<label class="swap-day-option${sel ? " selected" : ""}" onclick="selectSwapDay('${ent.dateKey}')">
+              <input type="radio" name="swap-day" value="${ent.dateKey}" ${sel ? "checked" : ""}>
+              <span class="swap-day-date">${ent.dateStr}</span>
+              <span class="swap-day-wod">${e(snippet)}</span>
+            </label>`;
+          }).join("");
+        }
+        updateSwapOriginalPreview();
+        document.getElementById("swap-overlay").classList.add("open");
+      }
+
+      function selectSwapDay(dateKey) {
+        _swapSelectedDateKey = dateKey;
+        document.querySelectorAll(".swap-day-option").forEach((el) => {
+          el.classList.toggle("selected", el.querySelector("input").value === dateKey);
+          el.querySelector("input").checked = el.querySelector("input").value === dateKey;
+        });
+        updateSwapOriginalPreview();
+      }
+
+      function updateSwapOriginalPreview() {
+        const section = document.getElementById("swap-original-section");
+        const preview = document.getElementById("swap-original-preview");
+        if (!_swapSelectedDateKey) { section.style.display = "none"; return; }
+        const info = getSchedLkForDate(_swapSelectedDateKey);
+        if (!info) { section.style.display = "none"; return; }
+        const parts = info.lk.split("_");
+        const origWod = findWod(parts[0], parts.slice(1).join("_"));
+        if (!origWod) { section.style.display = "none"; return; }
+        section.style.display = "";
+        preview.innerHTML =
+          `<div style="font-family:var(--mono);font-size:8px;color:var(--mu);margin-bottom:2px">${origWod.day.d} — ${origWod.wk.l}</div>` +
+          (origWod.day.n ? `<div class="wn">${e(origWod.day.n)}</div>` : "") +
+          e((origWod.day.w || "").split("\n").slice(0, 4).join("\n"));
+      }
+
+      function closeSwapModal() {
+        document.getElementById("swap-overlay").classList.remove("open");
+        _swapReplacement = null;
+        _swapSelectedDateKey = null;
+      }
+
+      function confirmSwap() {
+        if (!_swapReplacement || !_swapSelectedDateKey) return;
+        const info = getSchedLkForDate(_swapSelectedDateKey);
+        if (!info) return;
+        const origParts = info.lk.split("_");
+        const origWeekId = origParts[0];
+        const origDayName = origParts.slice(1).join("_");
+
+        const swaps = getSwaps();
+        swaps[_swapSelectedDateKey] = {
+          replacementWeekId: _swapReplacement.weekId,
+          replacementDay: _swapReplacement.dayName,
+          originalWeekId: origWeekId,
+          originalDay: origDayName,
+        };
+        saveSwaps(swaps);
+        closeSwapModal();
+        render();
+      }
+
+      function undoSwap(dateKey, pfx) {
+        const swaps = getSwaps();
+        delete swaps[dateKey];
+        saveSwaps(swaps);
+        render();
+        if (pfx === "m-" || pfx === "s-") {
+          // Re-open the modal/standalone on the original lk
+          const info = getSchedLkForDate(dateKey);
+          if (info) {
+            if (pfx === "m-") openWodModal(info.lk);
+            if (pfx === "s-") renderStandaloneContent(info.lk);
+          }
+        }
+      }
+
+      // Get the effective day data for a lookup key, considering swaps
+      function getSwappedDay(lk, schedMap) {
+        const swaps = getSwaps();
+        const schedDate = schedMap[lk];
+        if (!schedDate) return null;
+        const parsed = parseSchedDateStr(schedDate);
+        if (!parsed) return null;
+        const dateKey = toDateKey(parsed);
+        const swap = swaps[dateKey];
+        if (!swap) return null;
+        // This lk has a swap active
+        const replacement = findWod(swap.replacementWeekId, swap.replacementDay);
+        if (!replacement) return null;
+        return { swap, dateKey, replacementDay: replacement.day, replacementMeta: replacement.day.m, originalWeekId: swap.originalWeekId, originalDay: swap.originalDay };
+      }
+
+      // ============================
+      // DASHBOARD
+      // ============================
+      const _dashCharts = {};
+      function destroyDash(key) {
+        if (_dashCharts[key]) { _dashCharts[key].destroy(); delete _dashCharts[key]; }
+      }
+
+      function renderDashboard() {
+        const logs = gl();
+        const lks = Object.keys(logs);
+        const schedMap = getSchedule();
+
+        // ── Completion counts ──
+        let done = 0, missed = 0, skipped = 0, total = 0;
+        W.forEach((wk) => {
+          wk.days.forEach((day) => {
+            total++;
+            const lk = `${wk.id}_${day.d}`;
+            const entry = logs[lk];
+            if (!entry) return;
+            const st = entry.status || (entry.score || entry.weight || entry.notes ? "done" : "");
+            if (st === "done") done++;
+            else if (st === "missed") missed++;
+            else if (st === "skipped") skipped++;
+          });
+        });
+        const remaining = total - done - missed - skipped;
+        const pct = total ? Math.round((done / total) * 100) : 0;
+
+        // Ring chart
+        document.getElementById("dash-ring-pct").textContent = pct + "%";
+        destroyDash("ring");
+        _dashCharts.ring = new Chart(document.getElementById("dash-ring"), {
+          type: "doughnut",
+          data: {
+            labels: ["Done", "Missed", "Skipped", "Remaining"],
+            datasets: [{
+              data: [done, missed, skipped, remaining],
+              backgroundColor: ["#f07020", "#c0392b", "#555", "#1e1e1e"],
+              borderWidth: 0,
+            }]
+          },
+          options: {
+            cutout: "72%",
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                bodyFont: { family: "'DM Mono', monospace", size: 10 },
+                callbacks: { label: (c) => `${c.label}: ${c.raw}` }
+              }
+            }
+          }
+        });
+        document.getElementById("dash-ring-legend").innerHTML =
+          `<div class="dash-ring-legend-item"><div class="dash-ring-legend-dot" style="background:#f07020"></div><strong>${done}</strong> Done</div>` +
+          `<div class="dash-ring-legend-item"><div class="dash-ring-legend-dot" style="background:#c0392b"></div><strong>${missed}</strong> Missed</div>` +
+          `<div class="dash-ring-legend-item"><div class="dash-ring-legend-dot" style="background:#555"></div><strong>${skipped}</strong> Skipped</div>` +
+          `<div class="dash-ring-legend-item"><div class="dash-ring-legend-dot" style="background:#1e1e1e;border:1px solid #2a2a2a"></div><strong>${remaining}</strong> Remaining</div>`;
+
+        // ── Streaks ──
+        const hasSchedule = Object.keys(schedMap).length > 0;
+        let currentStreak = 0, longestStreak = 0, streak = 0;
+        if (hasSchedule) {
+          // Build sorted list of scheduled dates with statuses
+          const schedEntries = [];
+          W.forEach((wk) => {
+            wk.days.forEach((day) => {
+              const lk = `${wk.id}_${day.d}`;
+              const sd = schedMap[lk];
+              if (!sd) return;
+              const parsed = new Date(sd);
+              if (isNaN(parsed)) return;
+              const entry = logs[lk];
+              const st = entry?.status || (entry && (entry.score || entry.weight || entry.notes) ? "done" : "");
+              schedEntries.push({ date: parsed, status: st });
+            });
+          });
+          schedEntries.sort((a, b) => a.date - b.date);
+          // Only consider dates up to today
+          const today = new Date(); today.setHours(23, 59, 59, 999);
+          const pastEntries = schedEntries.filter((e) => e.date <= today);
+          pastEntries.forEach((e) => {
+            if (e.status === "done") { streak++; longestStreak = Math.max(longestStreak, streak); }
+            else if (e.status === "missed") { streak = 0; }
+            // skipped doesn't break streak
+          });
+          currentStreak = streak;
+        } else {
+          // Fallback: count consecutive days with "done" from most recent backward
+          const doneDates = lks
+            .filter((k) => { const e = logs[k]; return e.status === "done" || (!e.status && (e.score || e.weight || e.notes)); })
+            .map((k) => logs[k].date)
+            .filter(Boolean)
+            .map((d) => new Date(d).getTime())
+            .sort((a, b) => b - a);
+          const uniqueDays = [...new Set(doneDates.map((t) => new Date(t).toDateString()))];
+          for (let i = 0; i < uniqueDays.length; i++) {
+            streak++;
+            longestStreak = Math.max(longestStreak, streak);
+            if (i < uniqueDays.length - 1) {
+              const diff = new Date(uniqueDays[i]) - new Date(uniqueDays[i + 1]);
+              if (diff > 2 * 86400000) { if (i === 0) currentStreak = streak; streak = 0; }
+            }
+          }
+          if (currentStreak === 0 && streak > 0) currentStreak = streak;
+        }
+        document.getElementById("dash-streaks").innerHTML =
+          `<div class="dash-streak-item"><div class="dash-streak-num">${currentStreak}</div><div class="dash-streak-sub">Current Streak</div></div>` +
+          `<div class="dash-streak-item"><div class="dash-streak-num" style="color:var(--ac2)">${longestStreak}</div><div class="dash-streak-sub">Longest Streak</div></div>` +
+          `<div class="dash-streak-item"><div class="dash-streak-num" style="color:var(--ac3)">${done}</div><div class="dash-streak-sub">Total Done</div></div>`;
+
+        // ── Weekly Volume Bar Chart (last 8 scheduled weeks) ──
+        destroyDash("weekly");
+        const weekBuckets = {};
+        if (hasSchedule) {
+          W.forEach((wk) => {
+            wk.days.forEach((day) => {
+              const lk = `${wk.id}_${day.d}`;
+              const sd = schedMap[lk];
+              if (!sd) return;
+              const parsed = new Date(sd);
+              if (isNaN(parsed)) return;
+              const dow = parsed.getDay();
+              const monOff = dow === 0 ? -6 : 1 - dow;
+              const mon = new Date(parsed);
+              mon.setDate(mon.getDate() + monOff);
+              const wkKey = `${mon.getFullYear()}-${String(mon.getMonth() + 1).padStart(2, "0")}-${String(mon.getDate()).padStart(2, "0")}`;
+              if (!weekBuckets[wkKey]) weekBuckets[wkKey] = { total: 0, done: 0, missed: 0, label: "" };
+              weekBuckets[wkKey].total++;
+              const entry = logs[lk];
+              const st = entry?.status || (entry && (entry.score || entry.weight || entry.notes) ? "done" : "");
+              if (st === "done") weekBuckets[wkKey].done++;
+              else if (st === "missed") weekBuckets[wkKey].missed++;
+              const mo = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+              weekBuckets[wkKey].label = `${mo[mon.getMonth()]} ${mon.getDate()}`;
+            });
+          });
+        } else {
+          // Fallback: group archive weeks
+          W.forEach((wk) => {
+            if (!weekBuckets[wk.id]) weekBuckets[wk.id] = { total: 0, done: 0, missed: 0, label: wk.l.replace("Week of ", "") };
+            wk.days.forEach((day) => {
+              weekBuckets[wk.id].total++;
+              const lk = `${wk.id}_${day.d}`;
+              const entry = logs[lk];
+              const st = entry?.status || (entry && (entry.score || entry.weight || entry.notes) ? "done" : "");
+              if (st === "done") weekBuckets[wk.id].done++;
+              else if (st === "missed") weekBuckets[wk.id].missed++;
+            });
+          });
+        }
+        const wkKeys = Object.keys(weekBuckets).sort();
+        // Show last 8 weeks that have any status data, or last 8 overall
+        const relevantWks = wkKeys.filter((k) => weekBuckets[k].done + weekBuckets[k].missed > 0);
+        const displayWks = (relevantWks.length ? relevantWks : wkKeys).slice(-8);
+        const barLabels = displayWks.map((k) => weekBuckets[k].label);
+        const barDone = displayWks.map((k) => weekBuckets[k].done);
+        const barMissed = displayWks.map((k) => weekBuckets[k].missed);
+        const barColors = displayWks.map((k) => {
+          const b = weekBuckets[k];
+          if (!b.done && !b.missed) return "#2a2a2a";
+          const ratio = b.total ? b.done / b.total : 0;
+          // Interpolate orange (#f07020) to red (#c0392b)
+          const r = Math.round(240 + (192 - 240) * (1 - ratio));
+          const g = Math.round(112 + (57 - 112) * (1 - ratio));
+          const bl = Math.round(32 + (43 - 32) * (1 - ratio));
+          return `rgb(${r},${g},${bl})`;
+        });
+        _dashCharts.weekly = new Chart(document.getElementById("dash-weekly"), {
+          type: "bar",
+          data: {
+            labels: barLabels,
+            datasets: [
+              { label: "Done", data: barDone, backgroundColor: barColors, borderRadius: 2 },
+              { label: "Missed", data: barMissed, backgroundColor: "rgba(192,57,43,0.5)", borderRadius: 2 },
+            ]
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            scales: {
+              x: {
+                stacked: true,
+                ticks: { color: "#555", font: { family: "'DM Mono',monospace", size: 8 }, maxRotation: 45 },
+                grid: { display: false }
+              },
+              y: {
+                stacked: true, beginAtZero: true,
+                ticks: { color: "#555", font: { family: "'DM Mono',monospace", size: 9 }, stepSize: 1 },
+                grid: { color: "rgba(42,42,42,0.5)" }
+              }
+            },
+            plugins: { legend: { display: false } }
+          }
+        });
+
+        // ── Bodyweight Trend ──
+        destroyDash("bw");
+        const statsData = getStats();
+        const bwEntries = (statsData.entries || []).sort((a, b) => a.date.localeCompare(b.date));
+        const bwDelta = document.getElementById("dash-bw-delta");
+        if (bwEntries.length >= 1) {
+          const bwLabels = bwEntries.map((e) => {
+            const d = new Date(e.date + "T00:00:00");
+            return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+          });
+          const bwWeights = bwEntries.map((e) => e.weight);
+          const goal = statsData._goal || null;
+          const datasets = [{
+            label: "Weight",
+            data: bwWeights,
+            borderColor: "#f07020",
+            backgroundColor: "rgba(240,112,32,0.08)",
+            borderWidth: 2, pointRadius: 2, pointBackgroundColor: "#f07020",
+            tension: 0.3, fill: true,
+          }];
+          if (goal) {
+            datasets.push({
+              label: "Goal",
+              data: Array(bwLabels.length).fill(goal),
+              borderColor: "rgba(240,112,32,0.35)",
+              borderWidth: 1.5, borderDash: [6, 4],
+              pointRadius: 0, fill: false,
+            });
+          }
+          _dashCharts.bw = new Chart(document.getElementById("dash-bw"), {
+            type: "line",
+            data: { labels: bwLabels, datasets },
+            options: {
+              responsive: true, maintainAspectRatio: false,
+              scales: {
+                x: { ticks: { color: "#555", font: { family: "'DM Mono',monospace", size: 7 }, maxRotation: 45 }, grid: { display: false } },
+                y: { ticks: { color: "#555", font: { family: "'DM Mono',monospace", size: 9 } }, grid: { color: "rgba(42,42,42,0.5)" } }
+              },
+              plugins: { legend: { display: false } }
+            }
+          });
+          const first = bwWeights[0], last = bwWeights[bwWeights.length - 1];
+          const delta = +(last - first).toFixed(1);
+          const sign = delta > 0 ? "+" : "";
+          const goalStr = goal ? ` toward ${goal} lbs goal` : "";
+          bwDelta.innerHTML = `<div class="dash-bw-delta">${sign}${delta} lbs from start${goalStr}</div>`;
+        } else {
+          bwDelta.innerHTML = '<div class="dash-bw-empty">Log weigh-ins in the Stats tab</div>';
+        }
+
+        // ── Implement Breakdown (Radar) ──
+        destroyDash("impl");
+        const implCounts = {};
+        IMPLS.forEach((i) => { implCounts[i.id] = 0; });
+        W.forEach((wk) => {
+          wk.days.forEach((day) => {
+            const lk = `${wk.id}_${day.d}`;
+            const entry = logs[lk];
+            const st = entry?.status || (entry && (entry.score || entry.weight || entry.notes) ? "done" : "");
+            if (st !== "done") return;
+            const tags = getImplTags(day.w || "");
+            tags.forEach((t) => { if (implCounts[t] !== undefined) implCounts[t]++; });
+          });
+        });
+        const implLabels = IMPLS.map((i) => i.label);
+        const implData = IMPLS.map((i) => implCounts[i.id]);
+        _dashCharts.impl = new Chart(document.getElementById("dash-impl"), {
+          type: "radar",
+          data: {
+            labels: implLabels,
+            datasets: [{
+              label: "Completed WODs",
+              data: implData,
+              borderColor: "#f07020",
+              backgroundColor: "rgba(240,112,32,0.12)",
+              borderWidth: 1.5,
+              pointRadius: 3,
+              pointBackgroundColor: "#f07020",
+            }]
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            scales: {
+              r: {
+                beginAtZero: true,
+                grid: { color: "rgba(42,42,42,0.6)" },
+                angleLines: { color: "rgba(42,42,42,0.6)" },
+                pointLabels: { color: "#777", font: { family: "'DM Mono',monospace", size: 8 } },
+                ticks: { display: false }
+              }
+            },
+            plugins: { legend: { display: false } }
+          }
+        });
+
+        // ── PR Timeline ──
+        destroyDash("pr");
+        const bmLogs = getBmLogs();
+        const prPoints = [];
+        // PRs from benchmark logs
+        Object.keys(bmLogs).forEach((bmId) => {
+          const bm = BENCHMARKS.find((b) => b.id === bmId);
+          (bmLogs[bmId] || []).forEach((entry) => {
+            if (entry.pr && entry.date) {
+              prPoints.push({ date: new Date(entry.date), label: bm ? bm.name : bmId });
+            }
+          });
+        });
+        // PRs from WOD logs
+        lks.forEach((k) => {
+          const entry = logs[k];
+          if (entry.pr && entry.date) {
+            const parts = k.split("_");
+            const dayName = parts.slice(1).join("_");
+            prPoints.push({ date: new Date(entry.date), label: dayName });
+          }
+        });
+        prPoints.sort((a, b) => a.date - b.date);
+        if (prPoints.length) {
+          const prLabels = prPoints.map((p) => p.date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "2-digit" }));
+          const prData = prPoints.map((_, i) => 1);
+          const prNames = prPoints.map((p) => p.label);
+          _dashCharts.pr = new Chart(document.getElementById("dash-pr"), {
+            type: "bar",
+            data: {
+              labels: prLabels,
+              datasets: [{
+                data: prData,
+                backgroundColor: "#ff5733",
+                borderRadius: 6,
+                barThickness: 8,
+              }]
+            },
+            options: {
+              responsive: true, maintainAspectRatio: false,
+              indexAxis: "x",
+              scales: {
+                x: { ticks: { color: "#555", font: { family: "'DM Mono',monospace", size: 7 }, maxRotation: 60 }, grid: { display: false } },
+                y: { display: false, max: 1.5 }
+              },
+              plugins: {
+                legend: { display: false },
+                tooltip: {
+                  bodyFont: { family: "'DM Mono', monospace", size: 10 },
+                  callbacks: { label: (c) => prNames[c.dataIndex] }
+                }
+              }
+            }
+          });
+        } else {
+          const prCtx = document.getElementById("dash-pr").getContext("2d");
+          prCtx.clearRect(0, 0, prCtx.canvas.width, prCtx.canvas.height);
+          document.getElementById("dash-pr").parentElement.innerHTML =
+            '<div class="dash-pr-empty">No PRs logged yet — hit a personal record and it\'ll show here</div>';
+        }
+      }
+
+      // ============================
       // TABS
       // ============================
       function showTab(el) {
@@ -4339,9 +5855,11 @@ All cycle percentages based on this number.`,
         document
           .getElementById("panel-" + el.dataset.panel)
           .classList.add("on");
+        if (el.dataset.panel === "dashboard") renderDashboard();
         if (el.dataset.panel === "implements") renderImpls();
         if (el.dataset.panel === "benchmarks") renderBm();
         if (el.dataset.panel === "calendar") renderCal();
+        if (el.dataset.panel === "stats") renderStats();
         if (el.dataset.panel === "create") renderCustomList();
       }
 
@@ -4355,7 +5873,12 @@ All cycle percentages based on this number.`,
           W.reduce((a, w) => a + w.days.length, 0) + getCustom().length;
         document.getElementById("sW").textContent = W.length;
         document.getElementById("sD").textContent = allDays;
-        document.getElementById("sL").textContent = ks.length;
+        const doneCount = ks.filter((k) => l[k].status === "done" || (!l[k].status && (l[k].score || l[k].weight || l[k].notes))).length;
+        const missedCount = ks.filter((k) => l[k].status === "missed").length;
+        const skippedCount = ks.filter((k) => l[k].status === "skipped").length;
+        document.getElementById("sDone").textContent = doneCount;
+        document.getElementById("sMissed").textContent = missedCount;
+        document.getElementById("sSkip").textContent = skippedCount;
         document.getElementById("sP").textContent = ks.filter(
           (k) => l[k].pr,
         ).length;
@@ -4452,28 +5975,87 @@ All cycle percentages based on this number.`,
         opts = opts || {};
         const lk = opts.lk || `${weekId}_${day.d}`;
         const p = opts.pfx || "";
-        const implTags = renderImplTags(getImplTags(day.w || ""));
-        let html = `<div class="dc"${!p ? ` data-lk="${lk}"` : ""}>`;
+        const schedMap = opts.schedMap || {};
+        const schedDate = schedMap[lk];
+
+        // Check for swap on this scheduled date
+        const swapInfo = getSwappedDay(lk, schedMap);
+        let displayDay = day;
+        let displayMeta = m;
+        let isSwapped = false;
+        let swapDateKey = null;
+        if (swapInfo) {
+          displayDay = swapInfo.replacementDay;
+          displayMeta = swapInfo.replacementMeta;
+          isSwapped = true;
+          swapDateKey = swapInfo.dateKey;
+        }
+
+        const implTags = renderImplTags(getImplTags(displayDay.w || ""));
+        const status = log?.status || "";
+        const stClass = status ? ` st-${status}` : (isSwapped ? " st-swapped" : "");
+        let html = `<div class="dc${stClass}"${!p ? ` data-lk="${lk}"` : ""}>`;
         if (!p) html += `<span class="dc-expand">⤢</span>`;
-        html += `<div class="dl">${day.d}${log ? '<span class="db">DONE</span>' : ""}${log?.pr ? '<span class="pb">PR</span>' : ""}</div>`;
-        if (day.n) html += `<div class="wn">${e(day.n)}</div>`;
-        html += `<div class="ww">${e(day.w || "")}</div>`;
+        // Day label with badges
+        let badges = "";
+        if (isSwapped) badges += '<span class="swap-badge">SWAPPED</span>';
+        if (schedDate && !isSwapped) badges += '<span class="sched-badge">SCHED</span>';
+        if (status === "done") badges += '<span class="db">DONE</span>';
+        else if (status === "missed") badges += '<span class="missed-badge">MISSED</span>';
+        else if (status === "skipped") badges += '<span class="skipped-badge">SKIPPED</span>';
+        if (log && !status) badges += '<span class="db">DONE</span>';
+        if (log?.pr) badges += '<span class="pb">PR</span>';
+        html += `<div class="dl">${day.d}${badges}</div>`;
+        if (schedDate) html += `<div class="sched-date">Scheduled: ${schedDate}</div>`;
+        if (isSwapped) {
+          const repWod = findWod(swapInfo.swap.replacementWeekId, swapInfo.swap.replacementDay);
+          html += `<div class="swap-info">Swapped in from ${repWod ? repWod.wk.l : "archive"} — ${swapInfo.swap.replacementDay}</div>`;
+        } else if (schedDate && opts.weekLabel) {
+          html += `<div class="orig-date">Originally programmed: ${opts.weekLabel} — ${day.d}</div>`;
+        }
+        if (displayDay.n) html += `<div class="wn">${e(displayDay.n)}</div>`;
+        html += `<div class="ww">${e(displayDay.w || "")}</div>`;
         if (implTags) html += `<div style="margin-top:6px">${implTags}</div>`;
-        if (m) {
-          if (m.s || m.x || m.sc || m.gl) {
+        if (displayMeta) {
+          if (displayMeta.s || displayMeta.x || displayMeta.sc || displayMeta.gl) {
             html += `<div class="wm">`;
-            if (m.s)
-              html += `<div class="mr"><strong>Rx:</strong> ${e(m.s)}</div>`;
-            if (m.x)
-              html += `<div class="mr"><strong>+ Challenge:</strong> ${e(m.x)}</div>`;
-            if (m.sc)
-              html += `<div class="mr"><strong>Score:</strong> ${e(m.sc)}</div>`;
-            if (m.gl)
-              html += `<div class="mr"><strong>Goal:</strong> ${e(m.gl)}</div>`;
+            if (displayMeta.s)
+              html += `<div class="mr"><strong>Rx:</strong> ${e(displayMeta.s)}</div>`;
+            if (displayMeta.x)
+              html += `<div class="mr"><strong>+ Challenge:</strong> ${e(displayMeta.x)}</div>`;
+            if (displayMeta.sc)
+              html += `<div class="mr"><strong>Score:</strong> ${e(displayMeta.sc)}</div>`;
+            if (displayMeta.gl)
+              html += `<div class="mr"><strong>Goal:</strong> ${e(displayMeta.gl)}</div>`;
             html += `</div>`;
           }
-          if (m.t) html += `<div class="tip">💡 ${e(m.t)}</div>`;
+          if (displayMeta.t) html += `<div class="tip">💡 ${e(displayMeta.t)}</div>`;
         }
+        // Swap: View Original toggle + Undo
+        if (isSwapped) {
+          const origWod = findWod(swapInfo.originalWeekId, swapInfo.originalDay);
+          const togId = `${p}swap-orig-${lk}`;
+          const undoFn = p ? `undoSwap('${swapDateKey}','${p}')` : `undoSwap('${swapDateKey}','')`;
+          html += `<div style="margin-top:6px;display:flex;align-items:center;gap:4px">`;
+          html += `<button class="swap-toggle" onclick="event.stopPropagation();document.getElementById('${togId}').classList.toggle('hid')">▸ View Original</button>`;
+          html += `<button class="swap-undo" onclick="event.stopPropagation();${undoFn}">Undo Swap</button>`;
+          html += `</div>`;
+          if (origWod) {
+            html += `<div class="swap-original hid" id="${togId}">`;
+            html += `<div class="swap-original-label">Original WOD — ${origWod.day.d}, ${origWod.wk.l}</div>`;
+            if (origWod.day.n) html += `<div class="wn">${e(origWod.day.n)}</div>`;
+            html += `<div class="ww">${e(origWod.day.w || "")}</div>`;
+            html += `</div>`;
+          }
+        }
+        // Status toggle row
+        const setFn = p ? "setStatusCtx" : "setStatus";
+        const pfxArg = p ? `,\'${p}\'` : "";
+        html += `<div class="status-row">
+          <button class="status-btn${status === "done" ? " active-done" : ""}" onclick="event.stopPropagation();${setFn}('${lk}','done'${pfxArg})">Done</button>
+          <button class="status-btn${status === "missed" ? " active-missed" : ""}" onclick="event.stopPropagation();${setFn}('${lk}','missed'${pfxArg})">Missed</button>
+          <button class="status-btn${status === "skipped" ? " active-skipped" : ""}" onclick="event.stopPropagation();${setFn}('${lk}','skipped'${pfxArg})">Skipped</button>
+        </div>`;
         if (log) {
           html += `<div class="slog"><div class="sh"><span class="sd">${log.date || "Logged"}</span><button class="btn bg bsm" onclick="${p ? "deCtx" : "de"}('${lk}'${p ? ",'" + p + "'" : ""})">✕</button></div>`;
           if (log.score) html += `<div class="ss">${e(log.score)}</div>`;
@@ -4507,6 +6089,8 @@ All cycle percentages based on this number.`,
           any = false,
           ly = null;
         const custom = getCustom();
+        const schedMap = getSchedule();
+        const hasSchedule = Object.keys(schedMap).length > 0;
         wodLookup = {};
         // Populate wodLookup for ALL WODs (needed for hash/deep-link access)
         W.forEach((wk) => {
@@ -4571,41 +6155,90 @@ All cycle percentages based on this number.`,
                 weekLabel: "My Custom WODs",
                 weekId: "custom",
               };
-              html += renderDayCard(dayObj, "custom", log, meta, { lk });
+              html += renderDayCard(dayObj, "custom", log, meta, { lk, schedMap });
             });
             html += `</div></div>`;
           }
         }
 
-        W.forEach((wk) => {
-          const vd = wk.days.filter((d) => matchDay({ ...d, wid: wk.id }));
-          if (!vd.length) return;
-          any = true;
-          if (wk.y !== ly && CF === "all" && !CS) {
-            html += `<div class="yd">${wk.y}</div>`;
-            ly = wk.y;
-          }
-          html += `<div class="wc" id="c-${wk.id}"><div class="wh" onclick="tog('${wk.id}')">
+        // Scheduled view: flat chronological list grouped by scheduled week
+        if (hasSchedule && CF === "all" && !CS) {
+          // Build flat list of all archive days with their scheduled dates
+          const schedDays = [];
+          W.forEach((wk) => {
+            wk.days.forEach((day) => {
+              const lk = `${wk.id}_${day.d}`;
+              if (schedMap[lk]) {
+                schedDays.push({ day, wk, lk, schedDateStr: schedMap[lk] });
+              }
+            });
+          });
+          // Group by scheduled week (Mon–Fri)
+          let currentWeekLabel = null;
+          let weekOpen = false;
+          schedDays.forEach((entry) => {
+            const dateStr = entry.schedDateStr;
+            // Parse "Mon Mar 24, 2026" to get the Monday of that week
+            const parsed = new Date(dateStr);
+            const dow = parsed.getDay();
+            const mondayOffset = dow === 0 ? -6 : 1 - dow;
+            const monday = new Date(parsed);
+            monday.setDate(monday.getDate() + mondayOffset);
+            const weekLabel = `Week of ${formatSchedDate(monday).slice(4)}`;
+            if (weekLabel !== currentWeekLabel) {
+              if (weekOpen) html += `</div></div>`;
+              currentWeekLabel = weekLabel;
+              const weekSlug = `sched-${monday.toISOString().slice(0, 10)}`;
+              any = true;
+              html += `<div class="wc" id="c-${weekSlug}"><div class="wh" onclick="tog('${weekSlug}')">
+      <div><div class="wt">${weekLabel}</div><div class="ws" style="color:var(--ac3)">Scheduled</div></div>
+      <div class="wtog" id="tg-${weekSlug}">+</div>
+    </div><div class="wb" id="b-${weekSlug}">`;
+              weekOpen = true;
+            }
+            const log = l[entry.lk];
+            wodLookup[entry.lk] = {
+              day: entry.day,
+              m: entry.day.m,
+              weekLabel: entry.wk.l,
+              weekId: entry.wk.id,
+            };
+            html += renderDayCard(entry.day, entry.wk.id, log, entry.day.m, { schedMap, weekLabel: entry.wk.l });
+          });
+          if (weekOpen) html += `</div></div>`;
+        } else {
+          // Standard archive view (with schedule dates overlaid if present)
+          W.forEach((wk) => {
+            const vd = wk.days.filter((d) => matchDay({ ...d, wid: wk.id }));
+            if (!vd.length) return;
+            any = true;
+            if (wk.y !== ly && CF === "all" && !CS) {
+              html += `<div class="yd">${wk.y}</div>`;
+              ly = wk.y;
+            }
+            html += `<div class="wc" id="c-${wk.id}"><div class="wh" onclick="tog('${wk.id}')">
       <div><div class="wt">${wk.l.replace("Week of ", "")}</div><div class="ws">Strong City S&C</div></div>
       <div class="wtog" id="tg-${wk.id}">+</div>
     </div><div class="wb" id="b-${wk.id}">`;
-          vd.forEach((day) => {
-            const lk = `${wk.id}_${day.d}`,
-              log = l[lk];
-            wodLookup[lk] = {
-              day,
-              m: day.m,
-              weekLabel: wk.l,
-              weekId: wk.id,
-            };
-            html += renderDayCard(day, wk.id, log, day.m);
+            vd.forEach((day) => {
+              const lk = `${wk.id}_${day.d}`,
+                log = l[lk];
+              wodLookup[lk] = {
+                day,
+                m: day.m,
+                weekLabel: wk.l,
+                weekId: wk.id,
+              };
+              html += renderDayCard(day, wk.id, log, day.m, { schedMap, weekLabel: wk.l });
+            });
+            html += `</div></div>`;
           });
-          html += `</div></div>`;
-        });
+        }
         if (!any)
           html = `<div style="padding:60px 20px;text-align:center;font-family:var(--disp);font-size:20px;letter-spacing:3px;color:var(--br)">No Workouts Found</div>`;
         mc.innerHTML = html;
         st();
+        updateSchedClearBtn();
       }
 
       function tog(id) {
@@ -4625,7 +6258,8 @@ All cycle percentages based on this number.`,
           day: "numeric",
           year: "numeric",
         });
-        sl(k, { score, weight, notes, pr, date });
+        const prev = gl()[k] || {};
+        sl(k, { score, weight, notes, pr, date, status: prev.status || "done" });
         render();
         setTimeout(() => {
           const f = document.getElementById("f-" + k);
@@ -4637,6 +6271,33 @@ All cycle percentages based on this number.`,
           dl(k);
           render();
         }
+      }
+
+      // Three-state completion status
+      function setStatus(lk, status) {
+        const l = gl();
+        const existing = l[lk] || {};
+        // Toggle: clicking the same status clears it
+        if (existing.status === status) {
+          delete existing.status;
+        } else {
+          existing.status = status;
+        }
+        // If setting done and no date yet, add one
+        if (existing.status === "done" && !existing.date) {
+          existing.date = new Date().toLocaleDateString("en-US", {
+            month: "short", day: "numeric", year: "numeric",
+          });
+        }
+        l[lk] = existing;
+        localStorage.setItem("scsc4", JSON.stringify(l));
+        st();
+        render();
+      }
+      function setStatusCtx(lk, status, pfx) {
+        setStatus(lk, status);
+        if (pfx === "m-") openWodModal(lk);
+        if (pfx === "s-") renderStandaloneContent(lk);
       }
 
       function buildList() {
@@ -4733,8 +6394,9 @@ All cycle percentages based on this number.`,
                 '<div style="font-family:var(--mono);font-size:10.5px;color:var(--tx);line-height:1.6;white-space:pre-line">' +
                 e(preview) +
                 "</div>" +
-                '<div style="margin-top:6px">' +
+                '<div style="margin-top:6px;display:flex;align-items:center;gap:8px">' +
                 tags +
+                `<button class="swap-btn-impl" onclick="event.stopPropagation();openSwapModal('${wk.id}','${day.d}')">Swap In →</button>` +
                 "</div>" +
                 "</div>"
               );
@@ -4773,69 +6435,374 @@ All cycle percentages based on this number.`,
       // ============================
       // CALENDAR TAB
       // ============================
+      function parseSchedDateStr(str) {
+        // Parse "Mon Mar 24, 2026" -> Date object
+        const d = new Date(str);
+        return isNaN(d) ? null : d;
+      }
+
+      function toDateKey(d) {
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      }
+
       function renderCal() {
         const logs = gl();
-        // Build a map: "YYYY-MM-DD" -> {hasWod, logged, weekId, dayId}
-        const wodMap = {};
-        W.forEach((wk) => {
-          wk.days.forEach((day) => {
-            // Parse date from day.dt or infer from week label
-            const dt = day.dt || "";
-            const m = dt.match(/(\d+)\/(\d+)\/(\d+)/);
-            if (m) {
-              const [_, mo, d, y] = m;
-              const yr = y.length === 2 ? "20" + y : y;
-              const key = `${yr}-${mo.padStart(2, "0")}-${d.padStart(2, "0")}`;
+        const schedMap = getSchedule();
+        const hasSchedule = Object.keys(schedMap).length > 0;
+
+        // Build date -> workout info map from the schedule
+        const wodMap = {}; // "YYYY-MM-DD" -> { hasWod, status, weekId, lk }
+        // Also track scheduled week boundaries for summaries
+        const weekStats = {}; // "YYYY-MM-DD monday" -> { label, total, done, missed, skipped }
+
+        if (hasSchedule) {
+          // Use scheduled dates
+          const calSwaps = getSwaps();
+          W.forEach((wk) => {
+            wk.days.forEach((day) => {
               const lk = `${wk.id}_${day.d}`;
-              wodMap[key] = { hasWod: true, logged: !!logs[lk], weekId: wk.id };
-            }
+              const schedStr = schedMap[lk];
+              if (!schedStr) return;
+              const schedDate = parseSchedDateStr(schedStr);
+              if (!schedDate) return;
+              const key = toDateKey(schedDate);
+              const logEntry = logs[lk];
+              const status = logEntry?.status || (logEntry && (logEntry.score || logEntry.weight || logEntry.notes) ? "done" : "");
+              const isSwapped = !!calSwaps[key];
+              wodMap[key] = { hasWod: true, status, weekId: wk.id, lk, swapped: isSwapped };
+
+              // Weekly stats keyed by Monday of the scheduled week
+              const dow = schedDate.getDay();
+              const monOff = dow === 0 ? -6 : 1 - dow;
+              const mon = new Date(schedDate);
+              mon.setDate(mon.getDate() + monOff);
+              const monKey = toDateKey(mon);
+              if (!weekStats[monKey]) {
+                weekStats[monKey] = { label: `Week of ${formatSchedDate(mon).slice(4)}`, total: 0, done: 0, missed: 0, skipped: 0 };
+              }
+              weekStats[monKey].total++;
+              if (status === "done") weekStats[monKey].done++;
+              else if (status === "missed") weekStats[monKey].missed++;
+              else if (status === "skipped") weekStats[monKey].skipped++;
+            });
           });
+        }
+
+        // Weekly summary section
+        let summaryHtml = '<div class="cal-summaries"><div class="cal-summaries-title">Weekly Completion</div>';
+        if (!hasSchedule) {
+          summaryHtml += '<div class="cal-week-summary" style="color:var(--br)">Use "Schedule Forward" in the WOD tab to map workouts to calendar dates</div>';
+        } else {
+          // Sort week keys chronologically, show ones with any status first, then upcoming
+          const wkKeys = Object.keys(weekStats).sort();
+          const activeWks = wkKeys.filter((k) => {
+            const s = weekStats[k];
+            return s.done + s.missed + s.skipped > 0;
+          });
+          const upcomingWks = wkKeys.filter((k) => {
+            const s = weekStats[k];
+            return s.done + s.missed + s.skipped === 0;
+          });
+          // Show active weeks (most recent first)
+          if (activeWks.length) {
+            [...activeWks].reverse().forEach((k) => {
+              const s = weekStats[k];
+              const parts = [];
+              if (s.done) parts.push(`<span class="cws-done">${s.done}/${s.total} Done</span>`);
+              if (s.missed) parts.push(`<span class="cws-missed">${s.missed} Missed</span>`);
+              if (s.skipped) parts.push(`<span class="cws-skipped">${s.skipped} Skipped</span>`);
+              const unmarked = s.total - s.done - s.missed - s.skipped;
+              if (unmarked > 0) parts.push(`${unmarked} Upcoming`);
+              summaryHtml += `<div class="cal-week-summary"><strong>${weekStats[k].label}:</strong> ${parts.join(", ")}</div>`;
+            });
+          }
+          // Show next 4 upcoming weeks
+          upcomingWks.slice(0, 4).forEach((k) => {
+            const s = weekStats[k];
+            summaryHtml += `<div class="cal-week-summary"><strong>${s.label}:</strong> ${s.total} workouts upcoming</div>`;
+          });
+          if (!activeWks.length && !upcomingWks.length) {
+            summaryHtml += '<div class="cal-week-summary" style="color:var(--br)">No completion data yet — mark workouts as Done, Missed, or Skipped</div>';
+          }
+        }
+        summaryHtml += '</div>';
+
+        // Determine month range to display
+        const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        const dayHeaders = ["S", "M", "T", "W", "T", "F", "S"];
+        const now = new Date();
+        let startYear, startMonth, endYear, endMonth;
+
+        if (hasSchedule) {
+          // Find min and max dates from schedule
+          const allDateKeys = Object.keys(wodMap).sort();
+          if (allDateKeys.length) {
+            const first = allDateKeys[0].split("-").map(Number);
+            const last = allDateKeys[allDateKeys.length - 1].split("-").map(Number);
+            // Start from current month or first scheduled month, whichever is earlier
+            startYear = Math.min(now.getFullYear(), first[0]);
+            startMonth = startYear < now.getFullYear() ? 0 :
+                         startYear === first[0] ? Math.min(now.getMonth(), first[1] - 1) : now.getMonth();
+            startYear = first[0]; startMonth = first[1] - 1;
+            // If schedule starts in future, also show current month
+            if (startYear > now.getFullYear() || (startYear === now.getFullYear() && startMonth > now.getMonth())) {
+              startYear = now.getFullYear();
+              startMonth = now.getMonth();
+            }
+            endYear = last[0];
+            endMonth = last[1] - 1;
+          } else {
+            startYear = now.getFullYear(); startMonth = now.getMonth();
+            endYear = now.getFullYear(); endMonth = now.getMonth() + 2;
+          }
+        } else {
+          // No schedule — show current month + 2
+          startYear = now.getFullYear(); startMonth = now.getMonth();
+          endYear = now.getFullYear(); endMonth = now.getMonth() + 2;
+        }
+
+        // Highlight today
+        const todayKey = toDateKey(now);
+
+        // Build calendar HTML grouped by year
+        let html = summaryHtml;
+        let curYear = startYear, curMonth = startMonth;
+        let lastYr = null;
+        let monthsHtml = "";
+
+        while (curYear < endYear || (curYear === endYear && curMonth <= endMonth)) {
+          if (curYear !== lastYr) {
+            if (lastYr !== null) {
+              html += `<div class="cal-year"><div class="cal-year-title">${lastYr}</div><div class="cal-months">${monthsHtml}</div></div>`;
+              monthsHtml = "";
+            }
+            lastYr = curYear;
+          }
+          const firstDay = new Date(curYear, curMonth, 1).getDay();
+          const daysInMonth = new Date(curYear, curMonth + 1, 0).getDate();
+          let dayHtml = dayHeaders.map((d) => `<div class="cal-day-hdr">${d}</div>`).join("");
+          for (let i = 0; i < firstDay; i++) dayHtml += `<div class="cal-dot empty"></div>`;
+          for (let d = 1; d <= daysInMonth; d++) {
+            const key = `${curYear}-${String(curMonth + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+            const info = wodMap[key];
+            const isToday = key === todayKey;
+            const todayStyle = isToday ? ' style="outline:2px solid var(--ac3);outline-offset:-1px"' : "";
+            if (info && info.swapped && !info.status) {
+              dayHtml += `<div class="cal-dot cal-swapped" title="${key} — Swapped"${todayStyle} onclick="scrollToW('${info.weekId}')"></div>`;
+            } else if (info && info.status === "done") {
+              const swpCls = info.swapped ? " cal-swapped" : "";
+              dayHtml += `<div class="cal-dot cal-done${swpCls}" title="${key} — Done${info.swapped ? " (Swapped)" : ""}"${todayStyle} onclick="scrollToW('${info.weekId}')"></div>`;
+            } else if (info && info.status === "missed") {
+              dayHtml += `<div class="cal-dot cal-missed" title="${key} — Missed"${todayStyle} onclick="scrollToW('${info.weekId}')"></div>`;
+            } else if (info && info.status === "skipped") {
+              dayHtml += `<div class="cal-dot cal-skipped" title="${key} — Skipped"${todayStyle} onclick="scrollToW('${info.weekId}')"></div>`;
+            } else if (info && info.hasWod) {
+              dayHtml += `<div class="cal-dot has-wod" title="${key} — Scheduled"${todayStyle} onclick="scrollToW('${info.weekId}')"></div>`;
+            } else {
+              dayHtml += `<div class="cal-dot"${todayStyle}></div>`;
+            }
+          }
+          monthsHtml += `<div class="cal-month"><div class="cal-month-name">${monthNames[curMonth]}</div><div class="cal-grid">${dayHtml}</div></div>`;
+          curMonth++;
+          if (curMonth > 11) { curMonth = 0; curYear++; }
+        }
+        if (lastYr !== null) {
+          html += `<div class="cal-year"><div class="cal-year-title">${lastYr}</div><div class="cal-months">${monthsHtml}</div></div>`;
+        }
+
+        document.getElementById("cal-container").innerHTML = html;
+      }
+
+      // ============================
+      // STATS / BODY COMPOSITION
+      // ============================
+      function getStats() {
+        try { return JSON.parse(localStorage.getItem("scsc_stats") || "{}"); }
+        catch { return {}; }
+      }
+      function saveStats(data) {
+        localStorage.setItem("scsc_stats", JSON.stringify(data));
+      }
+      function getStatsGoal() {
+        const data = getStats();
+        return data._goal || null;
+      }
+      function saveStatsGoal() {
+        const v = parseFloat(document.getElementById("stats-goal-input").value);
+        if (!v || v <= 0) return;
+        const data = getStats();
+        data._goal = v;
+        saveStats(data);
+        renderStats();
+      }
+      function getStatsEntries() {
+        const data = getStats();
+        // Entries are stored as data.entries = [{date, weight, bf, notes}, ...]
+        return (data.entries || []).sort((a, b) => b.date.localeCompare(a.date));
+      }
+      function addStatEntry() {
+        const date = document.getElementById("stat-date").value;
+        const weight = parseFloat(document.getElementById("stat-weight").value);
+        if (!date || !weight || weight <= 0) return;
+        const bf = parseFloat(document.getElementById("stat-bf").value) || null;
+        const notes = document.getElementById("stat-notes").value.trim() || null;
+        const data = getStats();
+        if (!data.entries) data.entries = [];
+        data.entries.push({ date, weight, bf, notes });
+        saveStats(data);
+        // Clear form (keep date)
+        document.getElementById("stat-weight").value = "";
+        document.getElementById("stat-bf").value = "";
+        document.getElementById("stat-notes").value = "";
+        renderStats();
+      }
+      function delStatEntry(idx) {
+        const data = getStats();
+        if (!data.entries) return;
+        // idx is into the sorted (desc) array, convert to unsorted
+        const sorted = (data.entries).sort((a, b) => b.date.localeCompare(a.date));
+        const target = sorted[idx];
+        const realIdx = data.entries.indexOf(target);
+        if (realIdx > -1) data.entries.splice(realIdx, 1);
+        saveStats(data);
+        renderStats();
+      }
+
+      let _statsChart = null;
+      function renderStats() {
+        const data = getStats();
+        const goal = data._goal || null;
+        const entries = getStatsEntries();
+        const container = document.getElementById("stats-log-container");
+
+        // Goal input
+        const goalInput = document.getElementById("stats-goal-input");
+        if (goal && !goalInput.value) goalInput.value = goal;
+
+        // Date default
+        const dateInput = document.getElementById("stat-date");
+        if (!dateInput.value) dateInput.value = new Date().toISOString().split("T")[0];
+
+        // Goal banner
+        const currentWeight = entries.length ? entries[0].weight : null;
+        document.getElementById("sgb-current").textContent = currentWeight ? currentWeight + " lbs" : "—";
+        document.getElementById("sgb-goal").textContent = goal ? goal + " lbs" : "—";
+        const remain = document.getElementById("sgb-remain");
+        if (currentWeight && goal) {
+          const diff = +(currentWeight - goal).toFixed(1);
+          if (diff > 0) {
+            remain.textContent = diff + " lbs";
+            remain.className = "sgb-val sgb-remaining";
+            document.querySelector(".sgb-label:last-child") || null;
+          } else {
+            remain.textContent = "Goal reached!";
+            remain.className = "sgb-val sgb-reached";
+          }
+        } else {
+          remain.textContent = "—";
+          remain.className = "sgb-val sgb-remaining";
+        }
+
+        // Chart
+        const chronological = [...entries].reverse();
+        const labels = chronological.map((e) => {
+          const d = new Date(e.date + "T00:00:00");
+          return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
         });
+        const weights = chronological.map((e) => e.weight);
+        const bfData = chronological.map((e) => e.bf);
+        const hasBf = bfData.some((v) => v !== null);
 
-        const years = [2022, 2023, 2024];
-        const months = [
-          "Jan",
-          "Feb",
-          "Mar",
-          "Apr",
-          "May",
-          "Jun",
-          "Jul",
-          "Aug",
-          "Sep",
-          "Oct",
-          "Nov",
-          "Dec",
-        ];
-        const days = ["S", "M", "T", "W", "T", "F", "S"];
+        const ctx = document.getElementById("stats-chart");
+        if (_statsChart) { _statsChart.destroy(); _statsChart = null; }
 
-        let html = "";
-        years.forEach((yr) => {
-          let monthsHtml = "";
-          months.forEach((mo, mi) => {
-            const firstDay = new Date(yr, mi, 1).getDay();
-            const daysInMonth = new Date(yr, mi + 1, 0).getDate();
-            let dayHtml = days
-              .map((d) => `<div class="cal-day-hdr">${d}</div>`)
-              .join("");
-            for (let i = 0; i < firstDay; i++)
-              dayHtml += `<div class="cal-dot empty"></div>`;
-            for (let d = 1; d <= daysInMonth; d++) {
-              const key = `${yr}-${String(mi + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-              const info = wodMap[key];
-              if (info && info.logged) {
-                dayHtml += `<div class="cal-dot logged" title="${key}" onclick="scrollToW('${info.weekId}')"></div>`;
-              } else if (info && info.hasWod) {
-                dayHtml += `<div class="cal-dot has-wod" title="${key}" onclick="scrollToW('${info.weekId}')"></div>`;
-              } else {
-                dayHtml += `<div class="cal-dot"></div>`;
+        if (chronological.length >= 1) {
+          const datasets = [{
+            label: "Weight (lbs)",
+            data: weights,
+            borderColor: "#f07020",
+            backgroundColor: "rgba(240, 112, 32, 0.1)",
+            borderWidth: 2,
+            pointRadius: 3,
+            pointBackgroundColor: "#f07020",
+            tension: 0.3,
+            fill: true,
+          }];
+          if (hasBf) {
+            datasets.push({
+              label: "Body Fat %",
+              data: bfData,
+              borderColor: "#4fa3e0",
+              backgroundColor: "transparent",
+              borderWidth: 1.5,
+              pointRadius: 2,
+              pointBackgroundColor: "#4fa3e0",
+              tension: 0.3,
+              yAxisID: "bf",
+            });
+          }
+          if (goal) {
+            datasets.push({
+              label: "Goal",
+              data: Array(labels.length).fill(goal),
+              borderColor: "rgba(240, 112, 32, 0.4)",
+              borderWidth: 1.5,
+              borderDash: [6, 4],
+              pointRadius: 0,
+              fill: false,
+            });
+          }
+          _statsChart = new Chart(ctx, {
+            type: "line",
+            data: { labels, datasets },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              interaction: { mode: "index", intersect: false },
+              plugins: {
+                legend: {
+                  labels: { color: "#777", font: { family: "'DM Mono', monospace", size: 9 } }
+                }
+              },
+              scales: {
+                x: {
+                  ticks: { color: "#555", font: { family: "'DM Mono', monospace", size: 8 }, maxRotation: 45 },
+                  grid: { color: "rgba(42,42,42,0.5)" }
+                },
+                y: {
+                  position: "left",
+                  ticks: { color: "#777", font: { family: "'DM Mono', monospace", size: 9 } },
+                  grid: { color: "rgba(42,42,42,0.5)" }
+                },
+                ...(hasBf ? { bf: {
+                  position: "right",
+                  ticks: { color: "#4fa3e0", font: { family: "'DM Mono', monospace", size: 9 }, callback: (v) => v + "%" },
+                  grid: { drawOnChartArea: false }
+                }} : {})
               }
             }
-            monthsHtml += `<div class="cal-month"><div class="cal-month-name">${mo}</div><div class="cal-grid">${dayHtml}</div></div>`;
           });
-          html += `<div class="cal-year"><div class="cal-year-title">${yr}</div><div class="cal-months">${monthsHtml}</div></div>`;
+        }
+
+        // Log entries
+        if (!entries.length) {
+          container.innerHTML = '<div class="stats-empty">No entries yet — log your first weigh-in above</div>';
+          return;
+        }
+        let logHtml = '<div class="stats-log">';
+        entries.forEach((entry, i) => {
+          const d = new Date(entry.date + "T00:00:00");
+          const dateStr = d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+          logHtml += `<div class="stats-entry">
+            <div class="se-date">${dateStr}</div>
+            <div class="se-weight">${entry.weight} <span>lbs</span></div>
+            <div class="se-bf">${entry.bf ? entry.bf + "%" : ""}</div>
+            <div class="se-notes">${entry.notes ? e(entry.notes) : ""}</div>
+            <button class="se-del" onclick="delStatEntry(${i})" title="Delete">✕</button>
+          </div>`;
         });
-        document.getElementById("cal-container").innerHTML = html;
+        logHtml += '</div>';
+        container.innerHTML = logHtml;
       }
 
       // ============================
@@ -4957,7 +6924,7 @@ All cycle percentages based on this number.`,
           ? weekLabel.replace("Week of ", "Week of ")
           : "";
 
-        let body = renderDayCard(day, null, log, m, { lk, pfx: "m-" });
+        let body = renderDayCard(day, null, log, m, { lk, pfx: "m-", schedMap: getSchedule(), weekLabel });
         body += `<button class="wod-modal-standalone-btn" onclick="enterStandalone('${lk}')">View Standalone →</button>`;
         document.getElementById("wod-modal-body").innerHTML = body;
 
@@ -4994,7 +6961,8 @@ All cycle percentages based on this number.`,
           day: "numeric",
           year: "numeric",
         });
-        sl(k, { score, weight, notes, pr, date });
+        const prev = gl()[k] || {};
+        sl(k, { score, weight, notes, pr, date, status: prev.status || "done" });
         render();
         if (pfx === "m-") {
           openWodModal(k);
@@ -5056,10 +7024,10 @@ All cycle percentages based on this number.`,
       function renderStandaloneContent(lk) {
         const data = wodLookup[lk];
         if (!data) return;
-        const { day, m } = data;
+        const { day, m, weekLabel } = data;
         const log = gl()[lk];
         document.getElementById("wod-standalone-card").innerHTML =
-          renderDayCard(day, null, log, m, { lk, pfx: "s-" });
+          renderDayCard(day, null, log, m, { lk, pfx: "s-", schedMap: getSchedule(), weekLabel });
       }
 
       function enterStandalone(lk) {
@@ -5119,6 +7087,7 @@ All cycle percentages based on this number.`,
         .split("T")[0];
       buildList();
       render();
+      renderDashboard();
 
       // Day card click → open modal (event delegation)
       document.getElementById("mc").addEventListener("click", function (evt) {
