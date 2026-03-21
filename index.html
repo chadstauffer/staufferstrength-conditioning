@@ -169,9 +169,12 @@
       }
 
       /* ====== DASHBOARD PANEL ====== */
+      .dash-header {
+        display: flex; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap;
+      }
       .dash-grid {
         display: grid;
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: 2fr 3fr;
         gap: 14px;
       }
       .dash-card {
@@ -180,6 +183,7 @@
         border-radius: 4px;
         padding: 18px;
         min-height: 0;
+        overflow: hidden;
       }
       .dash-card.full { grid-column: 1 / -1; }
       .dash-card-title {
@@ -190,100 +194,60 @@
         text-transform: uppercase;
         margin-bottom: 12px;
       }
-      .dash-ring-wrap {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 32px;
-        flex-wrap: wrap;
+      /* Recovery gauge */
+      .dash-recovery-wrap { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 220px; }
+      .dash-recovery-gauge { position: relative; width: 180px; height: 180px; }
+      .dash-recovery-gauge svg { width: 100%; height: 100%; }
+      .dash-recovery-val { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; }
+      .dash-recovery-num { font-family: var(--disp); font-size: 52px; line-height: 1; }
+      .dash-recovery-label { font-family: var(--mono); font-size: 9px; letter-spacing: 2px; color: var(--mu); text-transform: uppercase; }
+      .dash-recovery-empty { font-family: var(--mono); font-size: 9px; color: var(--br); text-align: center; padding: 40px 10px; line-height: 1.6; }
+      /* Today's metrics */
+      .dash-metrics-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+      .dash-metric-card {
+        background: var(--s2); border: 1px solid var(--br); border-radius: 4px; padding: 10px; display: flex; flex-direction: column; gap: 4px;
       }
-      .dash-ring-chart { position: relative; width: 200px; height: 200px; }
-      .dash-ring-center {
-        position: absolute;
-        inset: 0;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        pointer-events: none;
-      }
-      .dash-ring-pct {
-        font-family: var(--disp);
-        font-size: 48px;
-        color: var(--tx);
-        line-height: 1;
-      }
-      .dash-ring-label {
-        font-family: var(--mono);
-        font-size: 9px;
-        letter-spacing: 2px;
-        color: var(--mu);
-        text-transform: uppercase;
-      }
-      .dash-ring-legend {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-      }
-      .dash-ring-legend-item {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        font-family: var(--mono);
-        font-size: 10px;
-        color: var(--mu);
-      }
-      .dash-ring-legend-dot {
-        width: 10px;
-        height: 10px;
-        border-radius: 2px;
-        flex-shrink: 0;
-      }
-      .dash-ring-legend-item strong {
-        color: var(--tx);
-        font-weight: 500;
-        min-width: 24px;
-        text-align: right;
-      }
-      .dash-streak-row {
-        display: flex;
-        gap: 24px;
-        justify-content: center;
-        flex-wrap: wrap;
-      }
-      .dash-streak-item { text-align: center; }
-      .dash-streak-num {
-        font-family: var(--disp);
-        font-size: 44px;
-        color: var(--ac);
-        line-height: 1;
-      }
-      .dash-streak-sub {
-        font-family: var(--mono);
-        font-size: 9px;
-        letter-spacing: 2px;
-        color: var(--mu);
-        text-transform: uppercase;
-      }
-      .dash-bw-delta {
-        font-family: var(--mono);
-        font-size: 11px;
-        color: var(--ac);
-        text-align: center;
-        margin-top: 8px;
-      }
+      .dm-label { font-family: var(--mono); font-size: 7px; letter-spacing: 2px; color: var(--mu); text-transform: uppercase; }
+      .dm-val { font-family: var(--disp); font-size: 26px; color: var(--tx); line-height: 1; }
+      .dm-spark { height: 28px; }
+      .dm-spark canvas { width: 100% !important; height: 28px !important; }
+      .dm-delta { font-family: var(--mono); font-size: 8px; display: flex; align-items: center; gap: 2px; }
+      .dm-up { color: var(--ac); }
+      .dm-down-good { color: var(--ac); }
+      .dm-down { color: #e53935; }
+      .dm-up-bad { color: #e53935; }
+      .dm-neutral { color: var(--mu); }
+      /* Completion ring + streak side-by-side */
+      .dash-comp-row { display: flex; gap: 14px; align-items: stretch; }
+      .dash-comp-ring-wrap { display: flex; align-items: center; justify-content: center; gap: 20px; flex-wrap: wrap; flex: 1; }
+      .dash-ring-chart { position: relative; width: 170px; height: 170px; }
+      .dash-ring-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; }
+      .dash-ring-pct { font-family: var(--disp); font-size: 42px; color: var(--tx); line-height: 1; }
+      .dash-ring-label { font-family: var(--mono); font-size: 8px; letter-spacing: 2px; color: var(--mu); text-transform: uppercase; }
+      .dash-ring-legend { display: flex; flex-direction: column; gap: 6px; }
+      .dash-ring-legend-item { display: flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 9px; color: var(--mu); }
+      .dash-ring-legend-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+      .dash-ring-legend-item strong { color: var(--tx); font-weight: 500; min-width: 20px; text-align: right; }
+      .dash-streak-col { display: flex; flex-direction: column; gap: 10px; justify-content: center; min-width: 120px; }
+      .dash-streak-card { background: var(--s2); border: 1px solid var(--br); border-radius: 4px; padding: 14px; text-align: center; }
+      .dash-streak-num { font-family: var(--disp); font-size: 38px; color: var(--ac); line-height: 1; }
+      .dash-streak-sub { font-family: var(--mono); font-size: 8px; letter-spacing: 2px; color: var(--mu); text-transform: uppercase; margin-top: 2px; }
+      .dash-streak-icon { display: inline-block; vertical-align: middle; margin-right: 4px; }
+      /* Weight trend */
       .dash-chart-wrap { position: relative; width: 100%; }
       .dash-chart-wrap canvas { width: 100% !important; }
-      .dash-pr-empty, .dash-bw-empty {
-        font-family: var(--mono);
-        font-size: 10px;
-        color: var(--br);
-        text-align: center;
-        padding: 24px 0;
-      }
+      .dash-bw-banner { display: flex; gap: 16px; align-items: baseline; margin-bottom: 10px; flex-wrap: wrap; }
+      .dash-bw-stat { text-align: center; }
+      .dash-bw-stat-val { font-family: var(--disp); font-size: 22px; color: var(--tx); line-height: 1; }
+      .dash-bw-stat-label { font-family: var(--mono); font-size: 7px; letter-spacing: 2px; color: var(--mu); text-transform: uppercase; }
+      .dash-bw-stat-val.ac { color: var(--ac); }
+      .dash-empty { font-family: var(--mono); font-size: 9px; color: var(--br); text-align: center; padding: 30px 10px; line-height: 1.7; }
+      /* Correlation */
+      .dash-corr-empty { font-family: var(--mono); font-size: 9px; color: var(--br); text-align: center; padding: 30px 10px; line-height: 1.7; }
       @media (max-width: 800px) {
         .dash-grid { grid-template-columns: 1fr; }
-        .dash-ring-wrap { flex-direction: column; }
+        .dash-comp-row { flex-direction: column; }
+        .dash-metrics-grid { grid-template-columns: 1fr 1fr; }
       }
       /* ====== ARCHIVE PANEL ====== */
       .archive-layout {
@@ -1547,6 +1511,78 @@
         letter-spacing: 3px;
         color: var(--br);
       }
+      /* Apple Health Sync */
+      .stats-sync-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .stats-sync-btn {
+        font-family: var(--mono);
+        font-size: 9px;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        padding: 6px 12px;
+        background: var(--ac3);
+        color: #000;
+        border: none;
+        border-radius: 2px;
+        cursor: pointer;
+        transition: all 0.12s;
+      }
+      .stats-sync-btn:hover { background: #7bc0e8; }
+      .stats-last-sync {
+        font-family: var(--mono);
+        font-size: 8px;
+        color: var(--mu);
+        letter-spacing: 1px;
+      }
+      .health-badge {
+        display: inline-block;
+        font-family: var(--mono);
+        font-size: 7px;
+        letter-spacing: 1px;
+        padding: 1px 5px;
+        border-radius: 2px;
+        background: rgba(79,163,224,0.15);
+        color: var(--ac3);
+        border: 1px solid rgba(79,163,224,0.3);
+        margin-left: 4px;
+        vertical-align: middle;
+      }
+      .se-health-extra {
+        font-family: var(--mono);
+        font-size: 8px;
+        color: var(--mu);
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .se-health-extra span { white-space: nowrap; }
+      /* Toast notification */
+      .toast {
+        position: fixed;
+        bottom: 24px;
+        left: 50%;
+        transform: translateX(-50%) translateY(80px);
+        background: var(--s2);
+        border: 1px solid var(--ac3);
+        color: var(--tx);
+        font-family: var(--mono);
+        font-size: 10px;
+        letter-spacing: 1px;
+        padding: 10px 20px;
+        border-radius: 4px;
+        z-index: 9999;
+        opacity: 0;
+        transition: all 0.3s ease;
+        pointer-events: none;
+      }
+      .toast.show {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+      }
       /* ====== CREATE PANEL ====== */
       .create-form {
         max-width: 700px;
@@ -1893,53 +1929,51 @@
 
     <!-- ===== DASHBOARD PANEL ===== -->
     <div class="panel on" id="panel-dashboard">
+      <div class="dash-header">
+        <button class="stats-sync-btn" onclick="triggerHealthSync()">⌚ Sync Apple Health</button>
+        <span class="stats-last-sync" id="dash-last-sync"></span>
+      </div>
       <div class="dash-grid">
-        <!-- Completion Ring -->
+        <!-- S1: Recovery Score -->
         <div class="dash-card">
-          <div class="dash-card-title">Completion</div>
-          <div class="dash-ring-wrap">
-            <div class="dash-ring-chart">
-              <canvas id="dash-ring"></canvas>
-              <div class="dash-ring-center">
-                <div class="dash-ring-pct" id="dash-ring-pct">0%</div>
-                <div class="dash-ring-label">Complete</div>
-              </div>
-            </div>
-            <div class="dash-ring-legend" id="dash-ring-legend"></div>
-          </div>
+          <div class="dash-card-title">Recovery</div>
+          <div class="dash-recovery-wrap" id="dash-recovery"></div>
         </div>
-        <!-- Streak Counter -->
+        <!-- S2: Today's Metrics -->
         <div class="dash-card">
-          <div class="dash-card-title">Streaks</div>
-          <div class="dash-streak-row" id="dash-streaks"></div>
+          <div class="dash-card-title">Today's Metrics</div>
+          <div class="dash-metrics-grid" id="dash-metrics"></div>
         </div>
-        <!-- Weekly Volume -->
+        <!-- S3: Body Weight Trend -->
         <div class="dash-card full">
-          <div class="dash-card-title">Weekly Volume — Last 8 Weeks</div>
-          <div class="dash-chart-wrap" style="height:180px">
-            <canvas id="dash-weekly"></canvas>
-          </div>
-        </div>
-        <!-- Bodyweight Trend -->
-        <div class="dash-card">
-          <div class="dash-card-title">Bodyweight Trend</div>
-          <div class="dash-chart-wrap" style="height:170px">
+          <div class="dash-card-title">Body Weight Trend</div>
+          <div id="dash-bw-banner"></div>
+          <div class="dash-chart-wrap" style="height:200px">
             <canvas id="dash-bw"></canvas>
           </div>
-          <div id="dash-bw-delta"></div>
         </div>
-        <!-- Implement Breakdown -->
-        <div class="dash-card">
-          <div class="dash-card-title">Implement Breakdown</div>
-          <div class="dash-chart-wrap" style="height:200px">
-            <canvas id="dash-impl"></canvas>
+        <!-- S4: WOD Completion + Streak -->
+        <div class="dash-card full">
+          <div class="dash-card-title">Completion & Streaks</div>
+          <div class="dash-comp-row">
+            <div class="dash-comp-ring-wrap">
+              <div class="dash-ring-chart">
+                <canvas id="dash-ring"></canvas>
+                <div class="dash-ring-center">
+                  <div class="dash-ring-pct" id="dash-ring-pct">0%</div>
+                  <div class="dash-ring-label">Complete</div>
+                </div>
+              </div>
+              <div class="dash-ring-legend" id="dash-ring-legend"></div>
+            </div>
+            <div class="dash-streak-col" id="dash-streaks"></div>
           </div>
         </div>
-        <!-- PR Timeline -->
+        <!-- S5: Training vs Recovery Correlation -->
         <div class="dash-card full">
-          <div class="dash-card-title">PR Timeline</div>
-          <div class="dash-chart-wrap" style="height:120px">
-            <canvas id="dash-pr"></canvas>
+          <div class="dash-card-title">Training vs Recovery Correlation</div>
+          <div class="dash-chart-wrap" style="height:200px" id="dash-corr-wrap">
+            <canvas id="dash-corr"></canvas>
           </div>
         </div>
       </div>
@@ -2117,6 +2151,11 @@
             <label>Goal wt:</label>
             <input type="number" id="stats-goal-input" placeholder="lbs" step="0.1" onchange="saveStatsGoal()">
           </div>
+        </div>
+        <!-- Apple Health Sync -->
+        <div class="stats-sync-row">
+          <button class="stats-sync-btn" onclick="triggerHealthSync()">⌚ Sync Apple Health</button>
+          <span class="stats-last-sync" id="stats-last-sync"></span>
         </div>
         <!-- Chart -->
         <div class="stats-chart-wrap">
@@ -5493,13 +5532,234 @@ All cycle percentages based on this number.`,
       function destroyDash(key) {
         if (_dashCharts[key]) { _dashCharts[key].destroy(); delete _dashCharts[key]; }
       }
+      function destroyAllDash() {
+        Object.keys(_dashCharts).forEach(destroyDash);
+      }
+
+      const FLAME_SVG = '<svg class="dash-streak-icon" width="14" height="18" viewBox="0 0 14 18"><path d="M7 0C7 0 3 5 3 9a4 4 0 0 0 8 0c0-4-4-9-4-9zM7 14a2 2 0 0 1-2-2c0-1.1.9-2.5 2-4 1.1 1.5 2 2.9 2 4a2 2 0 0 1-2 2z" fill="currentColor"/></svg>';
 
       function renderDashboard() {
+        destroyAllDash();
         const logs = gl();
         const lks = Object.keys(logs);
         const schedMap = getSchedule();
+        const statsData = getStats();
+        const allEntries = (statsData.entries || []).sort((a, b) => a.date.localeCompare(b.date));
+        const hasEntries = allEntries.length >= 3;
 
-        // ── Completion counts ──
+        // Last sync
+        const syncEl = document.getElementById("dash-last-sync");
+        if (statsData._lastHealthSync) {
+          const sd = new Date(statsData._lastHealthSync);
+          syncEl.textContent = "Last synced: " + sd.toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+        } else { syncEl.textContent = ""; }
+
+        // ═══════════════════════════════════════
+        // S1 — RECOVERY SCORE
+        // ═══════════════════════════════════════
+        const recoveryEl = document.getElementById("dash-recovery");
+        const entriesWithRecovery = allEntries.filter((e) => e.hrv && e.restingHR && e.sleep);
+        if (entriesWithRecovery.length >= 2) {
+          const latest = entriesWithRecovery[entriesWithRecovery.length - 1];
+          const last30 = entriesWithRecovery.slice(-30);
+          const avgHRV = last30.reduce((s, e) => s + e.hrv, 0) / last30.length;
+          const avgRHR = last30.reduce((s, e) => s + e.restingHR, 0) / last30.length;
+
+          // HRV component (33pts)
+          let hrvScore = 0;
+          if (latest.hrv >= avgHRV) hrvScore = 33;
+          else { const floor = avgHRV * 0.5; hrvScore = Math.max(0, Math.round(33 * (latest.hrv - floor) / (avgHRV - floor))); }
+
+          // RHR component (33pts)
+          let rhrScore = 0;
+          if (latest.restingHR <= avgRHR) rhrScore = 33;
+          else { const ceil = avgRHR * 1.2; rhrScore = Math.max(0, Math.round(33 * (ceil - latest.restingHR) / (ceil - avgRHR))); }
+
+          // Sleep component (34pts)
+          let sleepScore = 0;
+          if (latest.sleep >= 7) sleepScore = 34;
+          else if (latest.sleep <= 4) sleepScore = 0;
+          else sleepScore = Math.round(34 * (latest.sleep - 4) / 3);
+
+          const score = Math.min(100, hrvScore + rhrScore + sleepScore);
+          const color = score >= 70 ? "#4caf50" : score >= 40 ? "#f07020" : "#e53935";
+          const pctArc = score / 100;
+          const r = 72, cx = 90, cy = 90, sw = 12;
+          const circumference = 2 * Math.PI * r;
+          const dashLen = circumference * pctArc;
+          const gap = circumference - dashLen;
+
+          recoveryEl.innerHTML = `
+            <div class="dash-recovery-gauge">
+              <svg viewBox="0 0 180 180">
+                <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#2a2a2a" stroke-width="${sw}"/>
+                <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${color}" stroke-width="${sw}"
+                  stroke-dasharray="${dashLen} ${gap}" stroke-linecap="round"
+                  transform="rotate(-90 ${cx} ${cy})" style="transition:stroke-dasharray 0.6s ease"/>
+              </svg>
+              <div class="dash-recovery-val">
+                <div class="dash-recovery-num" style="color:${color}">${score}</div>
+                <div class="dash-recovery-label">Recovery</div>
+              </div>
+            </div>`;
+        } else {
+          recoveryEl.innerHTML = '<div class="dash-recovery-empty">Log more data to calculate recovery<br>Needs HRV, Resting HR, and Sleep</div>';
+        }
+
+        // ═══════════════════════════════════════
+        // S2 — TODAY'S METRICS (6 cards)
+        // ═══════════════════════════════════════
+        const metricsEl = document.getElementById("dash-metrics");
+        const metricDefs = [
+          { key: "restingHR", label: "Resting HR", unit: "bpm", inverse: true },
+          { key: "hrv", label: "HRV", unit: "ms", inverse: false },
+          { key: "sleep", label: "Sleep", unit: "hrs", inverse: false },
+          { key: "activeCalories", label: "Active Cal", unit: "kcal", inverse: false },
+          { key: "vo2max", label: "VO₂ Max", unit: "", inverse: false },
+          { key: "bf", label: "Body Fat", unit: "%", inverse: true },
+        ];
+
+        if (!hasEntries) {
+          metricsEl.innerHTML = '<div class="dash-empty" style="grid-column:1/-1">Step on your scale and tap Sync Apple Health to get started</div>';
+        } else {
+          let metricsHtml = "";
+          metricDefs.forEach((def, mi) => {
+            const withVal = allEntries.filter((e) => e[def.key] != null);
+            const current = withVal.length ? withVal[withVal.length - 1][def.key] : null;
+            const last7 = withVal.slice(-7);
+            const avg7 = last7.length ? +(last7.reduce((s, e) => s + e[def.key], 0) / last7.length).toFixed(1) : null;
+
+            let deltaHtml = "";
+            if (current != null && avg7 != null && avg7 !== 0) {
+              const diff = current - avg7;
+              const pctChange = Math.abs(diff / avg7) * 100;
+              if (pctChange < 2) {
+                deltaHtml = `<div class="dm-delta dm-neutral">— avg</div>`;
+              } else if (diff > 0) {
+                const cls = def.inverse ? "dm-up-bad" : "dm-up";
+                deltaHtml = `<div class="dm-delta ${cls}">▲ +${Math.abs(diff).toFixed(1)}</div>`;
+              } else {
+                const cls = def.inverse ? "dm-down-good" : "dm-down";
+                deltaHtml = `<div class="dm-delta ${cls}">▼ ${Math.abs(diff).toFixed(1)}</div>`;
+              }
+            }
+
+            const sparkId = `dash-spark-${mi}`;
+            metricsHtml += `<div class="dash-metric-card">
+              <div class="dm-label">${def.label}</div>
+              <div class="dm-val">${current != null ? current : "—"}<span style="font-family:var(--mono);font-size:9px;color:var(--mu)"> ${current != null ? def.unit : ""}</span></div>
+              <div class="dm-spark"><canvas id="${sparkId}"></canvas></div>
+              ${deltaHtml}
+            </div>`;
+          });
+          metricsEl.innerHTML = metricsHtml;
+
+          // Render sparklines
+          metricDefs.forEach((def, mi) => {
+            const withVal = allEntries.filter((e) => e[def.key] != null);
+            const last7 = withVal.slice(-7);
+            if (last7.length < 2) return;
+            const sparkId = `dash-spark-${mi}`;
+            const canvas = document.getElementById(sparkId);
+            if (!canvas) return;
+            _dashCharts[`spark${mi}`] = new Chart(canvas, {
+              type: "line",
+              data: {
+                labels: last7.map(() => ""),
+                datasets: [{
+                  data: last7.map((e) => e[def.key]),
+                  borderColor: "#f07020",
+                  borderWidth: 1.5,
+                  pointRadius: 0,
+                  tension: 0.4,
+                  fill: false,
+                }]
+              },
+              options: {
+                responsive: true, maintainAspectRatio: false,
+                scales: { x: { display: false }, y: { display: false } },
+                plugins: { legend: { display: false }, tooltip: { enabled: false } },
+                elements: { line: { borderWidth: 1.5 } },
+              }
+            });
+          });
+        }
+
+        // ═══════════════════════════════════════
+        // S3 — BODY WEIGHT TREND
+        // ═══════════════════════════════════════
+        destroyDash("bw");
+        const bwBanner = document.getElementById("dash-bw-banner");
+        const bwWithWeight = allEntries.filter((e) => e.weight);
+        const goal = statsData._goal || null;
+
+        if (bwWithWeight.length >= 1) {
+          const first = bwWithWeight[0].weight;
+          const last = bwWithWeight[bwWithWeight.length - 1].weight;
+          const delta = +(last - first).toFixed(1);
+          const remaining = goal ? +(last - goal).toFixed(1) : null;
+
+          // Est weeks to goal
+          let etaStr = "Stay consistent to calculate ETA";
+          if (goal && bwWithWeight.length >= 2) {
+            const daySpan = (new Date(bwWithWeight[bwWithWeight.length - 1].date) - new Date(bwWithWeight[0].date)) / 86400000;
+            if (daySpan > 0) {
+              const ratePerDay = (last - first) / daySpan;
+              if (ratePerDay < 0 && remaining > 0) {
+                const daysLeft = remaining / Math.abs(ratePerDay);
+                const weeksLeft = Math.ceil(daysLeft / 7);
+                etaStr = `~${weeksLeft} weeks to goal`;
+              } else if (remaining <= 0) {
+                etaStr = "Goal reached!";
+              }
+            }
+          }
+
+          bwBanner.innerHTML = `<div class="dash-bw-stat"><div class="dash-bw-stat-val">${first}</div><div class="dash-bw-stat-label">Start</div></div>` +
+            `<div class="dash-bw-stat"><div class="dash-bw-stat-val">${last}</div><div class="dash-bw-stat-label">Current</div></div>` +
+            (goal ? `<div class="dash-bw-stat"><div class="dash-bw-stat-val" style="color:var(--mu)">${goal}</div><div class="dash-bw-stat-label">Goal</div></div>` : "") +
+            `<div class="dash-bw-stat"><div class="dash-bw-stat-val ac">${delta > 0 ? "+" : ""}${delta} lbs</div><div class="dash-bw-stat-label">Change</div></div>` +
+            (remaining != null && remaining > 0 ? `<div class="dash-bw-stat"><div class="dash-bw-stat-val ac">${remaining}</div><div class="dash-bw-stat-label">Lbs to go</div></div>` : "") +
+            `<div style="font-family:var(--mono);font-size:8px;color:var(--mu);align-self:center">${etaStr}</div>`;
+
+          const bwLabels = bwWithWeight.map((e) => new Date(e.date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" }));
+          const bwWeights = bwWithWeight.map((e) => e.weight);
+          const bfVals = bwWithWeight.map((e) => e.bf || null);
+          const hasBf = bfVals.some((v) => v != null);
+          const ds = [{
+            label: "Weight", data: bwWeights,
+            borderColor: "#f07020", backgroundColor: "rgba(240,112,32,0.08)",
+            borderWidth: 2, pointRadius: 2, pointBackgroundColor: "#f07020", tension: 0.3, fill: true,
+          }];
+          if (hasBf) ds.push({
+            label: "Body Fat %", data: bfVals,
+            borderColor: "#4fa3e0", backgroundColor: "transparent",
+            borderWidth: 1.5, pointRadius: 1.5, pointBackgroundColor: "#4fa3e0", tension: 0.3, yAxisID: "bf",
+          });
+          if (goal) ds.push({
+            label: "Goal", data: Array(bwLabels.length).fill(goal),
+            borderColor: "rgba(255,255,255,0.25)", borderWidth: 1.5, borderDash: [6, 4], pointRadius: 0, fill: false,
+          });
+          _dashCharts.bw = new Chart(document.getElementById("dash-bw"), {
+            type: "line", data: { labels: bwLabels, datasets: ds },
+            options: {
+              responsive: true, maintainAspectRatio: false,
+              scales: {
+                x: { ticks: { color: "#555", font: { family: "'DM Mono',monospace", size: 7 }, maxRotation: 45 }, grid: { display: false } },
+                y: { ticks: { color: "#555", font: { family: "'DM Mono',monospace", size: 9 } }, grid: { color: "rgba(42,42,42,0.5)" } },
+                ...(hasBf ? { bf: { position: "right", ticks: { color: "#4fa3e0", font: { family: "'DM Mono',monospace", size: 8 }, callback: (v) => v + "%" }, grid: { drawOnChartArea: false } }} : {}),
+              },
+              plugins: { legend: { labels: { color: "#555", font: { family: "'DM Mono',monospace", size: 8 } } } }
+            }
+          });
+        } else {
+          bwBanner.innerHTML = "";
+          document.getElementById("dash-bw").parentElement.innerHTML = '<div class="dash-empty">Step on your scale and tap Sync Apple Health to get started</div>';
+        }
+
+        // ═══════════════════════════════════════
+        // S4 — WOD COMPLETION RING + STREAKS
+        // ═══════════════════════════════════════
         let done = 0, missed = 0, skipped = 0, total = 0;
         W.forEach((wk) => {
           wk.days.forEach((day) => {
@@ -5513,331 +5773,143 @@ All cycle percentages based on this number.`,
             else if (st === "skipped") skipped++;
           });
         });
-        const remaining = total - done - missed - skipped;
+        const remaining2 = total - done - missed - skipped;
         const pct = total ? Math.round((done / total) * 100) : 0;
-
-        // Ring chart
         document.getElementById("dash-ring-pct").textContent = pct + "%";
         destroyDash("ring");
         _dashCharts.ring = new Chart(document.getElementById("dash-ring"), {
           type: "doughnut",
-          data: {
-            labels: ["Done", "Missed", "Skipped", "Remaining"],
-            datasets: [{
-              data: [done, missed, skipped, remaining],
-              backgroundColor: ["#f07020", "#c0392b", "#555", "#1e1e1e"],
-              borderWidth: 0,
-            }]
-          },
-          options: {
-            cutout: "72%",
-            responsive: true,
-            maintainAspectRatio: true,
-            plugins: {
-              legend: { display: false },
-              tooltip: {
-                bodyFont: { family: "'DM Mono', monospace", size: 10 },
-                callbacks: { label: (c) => `${c.label}: ${c.raw}` }
-              }
-            }
-          }
+          data: { labels: ["Done","Missed","Skipped","Remaining"], datasets: [{ data: [done, missed, skipped, remaining2], backgroundColor: ["#f07020","#e53935","#555","#2a2a2a"], borderWidth: 0 }] },
+          options: { cutout: "72%", responsive: true, maintainAspectRatio: true, plugins: { legend: { display: false }, tooltip: { bodyFont: { family: "'DM Mono',monospace", size: 10 }, callbacks: { label: (c) => `${c.label}: ${c.raw}` } } } }
         });
         document.getElementById("dash-ring-legend").innerHTML =
           `<div class="dash-ring-legend-item"><div class="dash-ring-legend-dot" style="background:#f07020"></div><strong>${done}</strong> Done</div>` +
-          `<div class="dash-ring-legend-item"><div class="dash-ring-legend-dot" style="background:#c0392b"></div><strong>${missed}</strong> Missed</div>` +
+          `<div class="dash-ring-legend-item"><div class="dash-ring-legend-dot" style="background:#e53935"></div><strong>${missed}</strong> Missed</div>` +
           `<div class="dash-ring-legend-item"><div class="dash-ring-legend-dot" style="background:#555"></div><strong>${skipped}</strong> Skipped</div>` +
-          `<div class="dash-ring-legend-item"><div class="dash-ring-legend-dot" style="background:#1e1e1e;border:1px solid #2a2a2a"></div><strong>${remaining}</strong> Remaining</div>`;
+          `<div class="dash-ring-legend-item"><div class="dash-ring-legend-dot" style="background:#2a2a2a;border:1px solid #333"></div><strong>${remaining2}</strong> Remaining</div>`;
 
-        // ── Streaks ──
+        // Streaks
         const hasSchedule = Object.keys(schedMap).length > 0;
         let currentStreak = 0, longestStreak = 0, streak = 0;
         if (hasSchedule) {
-          // Build sorted list of scheduled dates with statuses
           const schedEntries = [];
-          W.forEach((wk) => {
-            wk.days.forEach((day) => {
-              const lk = `${wk.id}_${day.d}`;
-              const sd = schedMap[lk];
-              if (!sd) return;
-              const parsed = new Date(sd);
-              if (isNaN(parsed)) return;
-              const entry = logs[lk];
-              const st = entry?.status || (entry && (entry.score || entry.weight || entry.notes) ? "done" : "");
-              schedEntries.push({ date: parsed, status: st });
-            });
-          });
+          W.forEach((wk) => { wk.days.forEach((day) => {
+            const lk = `${wk.id}_${day.d}`;
+            const sd = schedMap[lk]; if (!sd) return;
+            const parsed = new Date(sd); if (isNaN(parsed)) return;
+            const entry = logs[lk];
+            const st = entry?.status || (entry && (entry.score || entry.weight || entry.notes) ? "done" : "");
+            schedEntries.push({ date: parsed, status: st });
+          }); });
           schedEntries.sort((a, b) => a.date - b.date);
-          // Only consider dates up to today
-          const today = new Date(); today.setHours(23, 59, 59, 999);
-          const pastEntries = schedEntries.filter((e) => e.date <= today);
-          pastEntries.forEach((e) => {
+          const today = new Date(); today.setHours(23,59,59,999);
+          schedEntries.filter((e) => e.date <= today).forEach((e) => {
             if (e.status === "done") { streak++; longestStreak = Math.max(longestStreak, streak); }
             else if (e.status === "missed") { streak = 0; }
-            // skipped doesn't break streak
           });
           currentStreak = streak;
         } else {
-          // Fallback: count consecutive days with "done" from most recent backward
-          const doneDates = lks
-            .filter((k) => { const e = logs[k]; return e.status === "done" || (!e.status && (e.score || e.weight || e.notes)); })
-            .map((k) => logs[k].date)
-            .filter(Boolean)
-            .map((d) => new Date(d).getTime())
-            .sort((a, b) => b - a);
+          const doneDates = lks.filter((k) => { const e = logs[k]; return e.status === "done" || (!e.status && (e.score || e.weight || e.notes)); })
+            .map((k) => logs[k].date).filter(Boolean).map((d) => new Date(d).getTime()).sort((a, b) => b - a);
           const uniqueDays = [...new Set(doneDates.map((t) => new Date(t).toDateString()))];
           for (let i = 0; i < uniqueDays.length; i++) {
-            streak++;
-            longestStreak = Math.max(longestStreak, streak);
+            streak++; longestStreak = Math.max(longestStreak, streak);
             if (i < uniqueDays.length - 1) {
-              const diff = new Date(uniqueDays[i]) - new Date(uniqueDays[i + 1]);
-              if (diff > 2 * 86400000) { if (i === 0) currentStreak = streak; streak = 0; }
+              if (new Date(uniqueDays[i]) - new Date(uniqueDays[i+1]) > 2*86400000) { if (i === 0) currentStreak = streak; streak = 0; }
             }
           }
           if (currentStreak === 0 && streak > 0) currentStreak = streak;
         }
         document.getElementById("dash-streaks").innerHTML =
-          `<div class="dash-streak-item"><div class="dash-streak-num">${currentStreak}</div><div class="dash-streak-sub">Current Streak</div></div>` +
-          `<div class="dash-streak-item"><div class="dash-streak-num" style="color:var(--ac2)">${longestStreak}</div><div class="dash-streak-sub">Longest Streak</div></div>` +
-          `<div class="dash-streak-item"><div class="dash-streak-num" style="color:var(--ac3)">${done}</div><div class="dash-streak-sub">Total Done</div></div>`;
+          `<div class="dash-streak-card"><div class="dash-streak-num">${FLAME_SVG}${currentStreak}</div><div class="dash-streak-sub">Current Streak</div></div>` +
+          `<div class="dash-streak-card"><div class="dash-streak-num" style="color:var(--ac2)">${FLAME_SVG}${longestStreak}</div><div class="dash-streak-sub">Longest Streak</div></div>`;
 
-        // ── Weekly Volume Bar Chart (last 8 scheduled weeks) ──
-        destroyDash("weekly");
-        const weekBuckets = {};
-        if (hasSchedule) {
-          W.forEach((wk) => {
-            wk.days.forEach((day) => {
-              const lk = `${wk.id}_${day.d}`;
-              const sd = schedMap[lk];
-              if (!sd) return;
-              const parsed = new Date(sd);
-              if (isNaN(parsed)) return;
-              const dow = parsed.getDay();
-              const monOff = dow === 0 ? -6 : 1 - dow;
-              const mon = new Date(parsed);
-              mon.setDate(mon.getDate() + monOff);
-              const wkKey = `${mon.getFullYear()}-${String(mon.getMonth() + 1).padStart(2, "0")}-${String(mon.getDate()).padStart(2, "0")}`;
-              if (!weekBuckets[wkKey]) weekBuckets[wkKey] = { total: 0, done: 0, missed: 0, label: "" };
-              weekBuckets[wkKey].total++;
-              const entry = logs[lk];
-              const st = entry?.status || (entry && (entry.score || entry.weight || entry.notes) ? "done" : "");
-              if (st === "done") weekBuckets[wkKey].done++;
-              else if (st === "missed") weekBuckets[wkKey].missed++;
-              const mo = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-              weekBuckets[wkKey].label = `${mo[mon.getMonth()]} ${mon.getDate()}`;
-            });
-          });
-        } else {
-          // Fallback: group archive weeks
-          W.forEach((wk) => {
-            if (!weekBuckets[wk.id]) weekBuckets[wk.id] = { total: 0, done: 0, missed: 0, label: wk.l.replace("Week of ", "") };
-            wk.days.forEach((day) => {
-              weekBuckets[wk.id].total++;
-              const lk = `${wk.id}_${day.d}`;
-              const entry = logs[lk];
-              const st = entry?.status || (entry && (entry.score || entry.weight || entry.notes) ? "done" : "");
-              if (st === "done") weekBuckets[wk.id].done++;
-              else if (st === "missed") weekBuckets[wk.id].missed++;
-            });
-          });
-        }
-        const wkKeys = Object.keys(weekBuckets).sort();
-        // Show last 8 weeks that have any status data, or last 8 overall
-        const relevantWks = wkKeys.filter((k) => weekBuckets[k].done + weekBuckets[k].missed > 0);
-        const displayWks = (relevantWks.length ? relevantWks : wkKeys).slice(-8);
-        const barLabels = displayWks.map((k) => weekBuckets[k].label);
-        const barDone = displayWks.map((k) => weekBuckets[k].done);
-        const barMissed = displayWks.map((k) => weekBuckets[k].missed);
-        const barColors = displayWks.map((k) => {
-          const b = weekBuckets[k];
-          if (!b.done && !b.missed) return "#2a2a2a";
-          const ratio = b.total ? b.done / b.total : 0;
-          // Interpolate orange (#f07020) to red (#c0392b)
-          const r = Math.round(240 + (192 - 240) * (1 - ratio));
-          const g = Math.round(112 + (57 - 112) * (1 - ratio));
-          const bl = Math.round(32 + (43 - 32) * (1 - ratio));
-          return `rgb(${r},${g},${bl})`;
-        });
-        _dashCharts.weekly = new Chart(document.getElementById("dash-weekly"), {
-          type: "bar",
-          data: {
-            labels: barLabels,
-            datasets: [
-              { label: "Done", data: barDone, backgroundColor: barColors, borderRadius: 2 },
-              { label: "Missed", data: barMissed, backgroundColor: "rgba(192,57,43,0.5)", borderRadius: 2 },
-            ]
-          },
-          options: {
-            responsive: true, maintainAspectRatio: false,
-            scales: {
-              x: {
-                stacked: true,
-                ticks: { color: "#555", font: { family: "'DM Mono',monospace", size: 8 }, maxRotation: 45 },
-                grid: { display: false }
-              },
-              y: {
-                stacked: true, beginAtZero: true,
-                ticks: { color: "#555", font: { family: "'DM Mono',monospace", size: 9 }, stepSize: 1 },
-                grid: { color: "rgba(42,42,42,0.5)" }
-              }
-            },
-            plugins: { legend: { display: false } }
-          }
-        });
+        // ═══════════════════════════════════════
+        // S5 — TRAINING VS RECOVERY CORRELATION
+        // ═══════════════════════════════════════
+        destroyDash("corr");
+        const corrWrap = document.getElementById("dash-corr-wrap");
+        const schedMapKeys = schedMap;
+        // Build map of date -> HRV from stats entries
+        const hrvByDate = {};
+        allEntries.forEach((e) => { if (e.hrv) hrvByDate[e.date] = e.hrv; });
 
-        // ── Bodyweight Trend ──
-        destroyDash("bw");
-        const statsData = getStats();
-        const bwEntries = (statsData.entries || []).sort((a, b) => a.date.localeCompare(b.date));
-        const bwDelta = document.getElementById("dash-bw-delta");
-        if (bwEntries.length >= 1) {
-          const bwLabels = bwEntries.map((e) => {
-            const d = new Date(e.date + "T00:00:00");
-            return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-          });
-          const bwWeights = bwEntries.map((e) => e.weight);
-          const goal = statsData._goal || null;
-          const datasets = [{
-            label: "Weight",
-            data: bwWeights,
-            borderColor: "#f07020",
-            backgroundColor: "rgba(240,112,32,0.08)",
-            borderWidth: 2, pointRadius: 2, pointBackgroundColor: "#f07020",
-            tension: 0.3, fill: true,
-          }];
-          if (goal) {
-            datasets.push({
-              label: "Goal",
-              data: Array(bwLabels.length).fill(goal),
-              borderColor: "rgba(240,112,32,0.35)",
-              borderWidth: 1.5, borderDash: [6, 4],
-              pointRadius: 0, fill: false,
-            });
-          }
-          _dashCharts.bw = new Chart(document.getElementById("dash-bw"), {
-            type: "line",
-            data: { labels: bwLabels, datasets },
-            options: {
-              responsive: true, maintainAspectRatio: false,
-              scales: {
-                x: { ticks: { color: "#555", font: { family: "'DM Mono',monospace", size: 7 }, maxRotation: 45 }, grid: { display: false } },
-                y: { ticks: { color: "#555", font: { family: "'DM Mono',monospace", size: 9 } }, grid: { color: "rgba(42,42,42,0.5)" } }
-              },
-              plugins: { legend: { display: false } }
-            }
-          });
-          const first = bwWeights[0], last = bwWeights[bwWeights.length - 1];
-          const delta = +(last - first).toFixed(1);
-          const sign = delta > 0 ? "+" : "";
-          const goalStr = goal ? ` toward ${goal} lbs goal` : "";
-          bwDelta.innerHTML = `<div class="dash-bw-delta">${sign}${delta} lbs from start${goalStr}</div>`;
-        } else {
-          bwDelta.innerHTML = '<div class="dash-bw-empty">Log weigh-ins in the Stats tab</div>';
+        // Build scatter points: for each completed WOD, find next-day HRV
+        function getIntensity(wodText) {
+          const tx = (wodText || "").toLowerCase();
+          if (tx.includes("benchmark") || tx.match(/murph|helen|fran|fight gone|elizabeth|grace|jackie|cindy|kelly/)) return 10;
+          if (tx.includes("for time") || tx.includes("rft") || tx.includes("rounds for time")) return 9;
+          if (tx.includes("amrap")) return 8;
+          if (tx.includes("strength") || tx.includes("1rm") || tx.includes("deadlift") && tx.includes("max")) return 7;
+          if (tx.includes("emom") || tx.includes("every minute")) return 6;
+          if (tx.includes("carry") || tx.includes("sled") || tx.includes("farmer")) return 5;
+          return 6;
         }
 
-        // ── Implement Breakdown (Radar) ──
-        destroyDash("impl");
-        const implCounts = {};
-        IMPLS.forEach((i) => { implCounts[i.id] = 0; });
-        W.forEach((wk) => {
-          wk.days.forEach((day) => {
+        const corrPoints = [];
+        if (Object.keys(schedMapKeys).length > 0) {
+          W.forEach((wk) => { wk.days.forEach((day) => {
             const lk = `${wk.id}_${day.d}`;
             const entry = logs[lk];
             const st = entry?.status || (entry && (entry.score || entry.weight || entry.notes) ? "done" : "");
             if (st !== "done") return;
-            const tags = getImplTags(day.w || "");
-            tags.forEach((t) => { if (implCounts[t] !== undefined) implCounts[t]++; });
-          });
-        });
-        const implLabels = IMPLS.map((i) => i.label);
-        const implData = IMPLS.map((i) => implCounts[i.id]);
-        _dashCharts.impl = new Chart(document.getElementById("dash-impl"), {
-          type: "radar",
-          data: {
-            labels: implLabels,
-            datasets: [{
-              label: "Completed WODs",
-              data: implData,
-              borderColor: "#f07020",
-              backgroundColor: "rgba(240,112,32,0.12)",
-              borderWidth: 1.5,
-              pointRadius: 3,
-              pointBackgroundColor: "#f07020",
-            }]
-          },
-          options: {
-            responsive: true, maintainAspectRatio: false,
-            scales: {
-              r: {
-                beginAtZero: true,
-                grid: { color: "rgba(42,42,42,0.6)" },
-                angleLines: { color: "rgba(42,42,42,0.6)" },
-                pointLabels: { color: "#777", font: { family: "'DM Mono',monospace", size: 8 } },
-                ticks: { display: false }
-              }
-            },
-            plugins: { legend: { display: false } }
-          }
-        });
-
-        // ── PR Timeline ──
-        destroyDash("pr");
-        const bmLogs = getBmLogs();
-        const prPoints = [];
-        // PRs from benchmark logs
-        Object.keys(bmLogs).forEach((bmId) => {
-          const bm = BENCHMARKS.find((b) => b.id === bmId);
-          (bmLogs[bmId] || []).forEach((entry) => {
-            if (entry.pr && entry.date) {
-              prPoints.push({ date: new Date(entry.date), label: bm ? bm.name : bmId });
+            const schedStr = schedMapKeys[lk];
+            if (!schedStr) return;
+            const schedDate = parseSchedDateStr(schedStr);
+            if (!schedDate) return;
+            const nextDay = new Date(schedDate);
+            nextDay.setDate(nextDay.getDate() + 1);
+            const nextDayKey = toDateKey(nextDay);
+            if (hrvByDate[nextDayKey]) {
+              corrPoints.push({
+                x: getIntensity(day.w),
+                y: hrvByDate[nextDayKey],
+                date: schedStr,
+                type: day.w?.split("\n")[0]?.slice(0, 30) || "WOD",
+              });
             }
-          });
-        });
-        // PRs from WOD logs
-        lks.forEach((k) => {
-          const entry = logs[k];
-          if (entry.pr && entry.date) {
-            const parts = k.split("_");
-            const dayName = parts.slice(1).join("_");
-            prPoints.push({ date: new Date(entry.date), label: dayName });
+          }); });
+        }
+
+        if (corrPoints.length >= 10) {
+          // Ensure canvas exists
+          if (!corrWrap.querySelector("canvas")) {
+            corrWrap.innerHTML = '<canvas id="dash-corr"></canvas>';
           }
-        });
-        prPoints.sort((a, b) => a.date - b.date);
-        if (prPoints.length) {
-          const prLabels = prPoints.map((p) => p.date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "2-digit" }));
-          const prData = prPoints.map((_, i) => 1);
-          const prNames = prPoints.map((p) => p.label);
-          _dashCharts.pr = new Chart(document.getElementById("dash-pr"), {
-            type: "bar",
+          _dashCharts.corr = new Chart(document.getElementById("dash-corr"), {
+            type: "scatter",
             data: {
-              labels: prLabels,
               datasets: [{
-                data: prData,
-                backgroundColor: "#ff5733",
-                borderRadius: 6,
-                barThickness: 8,
+                data: corrPoints,
+                backgroundColor: "rgba(240,112,32,0.7)",
+                borderColor: "#f07020",
+                borderWidth: 1,
+                pointRadius: 5,
+                pointHoverRadius: 7,
               }]
             },
             options: {
               responsive: true, maintainAspectRatio: false,
-              indexAxis: "x",
               scales: {
-                x: { ticks: { color: "#555", font: { family: "'DM Mono',monospace", size: 7 }, maxRotation: 60 }, grid: { display: false } },
-                y: { display: false, max: 1.5 }
+                x: { title: { display: true, text: "INTENSITY", color: "#555", font: { family: "'DM Mono',monospace", size: 8 } }, ticks: { color: "#555", font: { family: "'DM Mono',monospace", size: 8 }, stepSize: 1 }, grid: { color: "rgba(42,42,42,0.5)" }, min: 4, max: 11 },
+                y: { title: { display: true, text: "NEXT-DAY HRV (ms)", color: "#555", font: { family: "'DM Mono',monospace", size: 8 } }, ticks: { color: "#555", font: { family: "'DM Mono',monospace", size: 8 } }, grid: { color: "rgba(42,42,42,0.5)" } },
               },
               plugins: {
                 legend: { display: false },
                 tooltip: {
-                  bodyFont: { family: "'DM Mono', monospace", size: 10 },
-                  callbacks: { label: (c) => prNames[c.dataIndex] }
+                  bodyFont: { family: "'DM Mono',monospace", size: 9 },
+                  callbacks: {
+                    label: (c) => {
+                      const p = corrPoints[c.dataIndex];
+                      return `${p.date} — ${p.type} → HRV: ${p.y} ms`;
+                    }
+                  }
                 }
               }
             }
           });
         } else {
-          const prCtx = document.getElementById("dash-pr").getContext("2d");
-          prCtx.clearRect(0, 0, prCtx.canvas.width, prCtx.canvas.height);
-          document.getElementById("dash-pr").parentElement.innerHTML =
-            '<div class="dash-pr-empty">No PRs logged yet — hit a personal record and it\'ll show here</div>';
+          corrWrap.innerHTML = '<div class="dash-corr-empty">Complete more workouts and sync Apple Health to unlock this chart<br>Needs at least 10 matched WOD + next-day HRV data points</div>';
         }
       }
 
@@ -6712,6 +6784,8 @@ All cycle percentages based on this number.`,
         const weights = chronological.map((e) => e.weight);
         const bfData = chronological.map((e) => e.bf);
         const hasBf = bfData.some((v) => v !== null);
+        const rhrData = chronological.map((e) => e.restingHR || null);
+        const hasRhr = rhrData.some((v) => v !== null);
 
         const ctx = document.getElementById("stats-chart");
         if (_statsChart) { _statsChart.destroy(); _statsChart = null; }
@@ -6739,6 +6813,19 @@ All cycle percentages based on this number.`,
               pointBackgroundColor: "#4fa3e0",
               tension: 0.3,
               yAxisID: "bf",
+            });
+          }
+          if (hasRhr) {
+            datasets.push({
+              label: "Resting HR",
+              data: rhrData,
+              borderColor: "#e74c3c",
+              backgroundColor: "transparent",
+              borderWidth: 1,
+              pointRadius: 1.5,
+              pointBackgroundColor: "#e74c3c",
+              tension: 0.3,
+              yAxisID: "rhr",
             });
           }
           if (goal) {
@@ -6778,11 +6865,19 @@ All cycle percentages based on this number.`,
                   position: "right",
                   ticks: { color: "#4fa3e0", font: { family: "'DM Mono', monospace", size: 9 }, callback: (v) => v + "%" },
                   grid: { drawOnChartArea: false }
+                }} : {}),
+                ...(hasRhr ? { rhr: {
+                  position: "right",
+                  display: false,
+                  beginAtZero: false,
                 }} : {})
               }
             }
           });
         }
+
+        // Last sync display
+        updateLastSyncDisplay();
 
         // Log entries
         if (!entries.length) {
@@ -6793,12 +6888,23 @@ All cycle percentages based on this number.`,
         entries.forEach((entry, i) => {
           const d = new Date(entry.date + "T00:00:00");
           const dateStr = d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-          logHtml += `<div class="stats-entry">
-            <div class="se-date">${dateStr}</div>
-            <div class="se-weight">${entry.weight} <span>lbs</span></div>
+          const isHealth = entry.source === "apple_health";
+          const healthBadge = isHealth ? '<span class="health-badge">⌚ Health</span>' : "";
+          // Build extra health metrics line
+          let extras = [];
+          if (entry.restingHR) extras.push(`<span>RHR ${entry.restingHR} bpm</span>`);
+          if (entry.activeCalories) extras.push(`<span>${entry.activeCalories} kcal</span>`);
+          if (entry.sleep) extras.push(`<span>${entry.sleep}h sleep</span>`);
+          if (entry.vo2max) extras.push(`<span>VO₂ ${entry.vo2max}</span>`);
+          if (entry.hrv) extras.push(`<span>HRV ${entry.hrv} ms</span>`);
+          const extrasHtml = extras.length ? `<div class="se-health-extra">${extras.join("")}</div>` : "";
+          logHtml += `<div class="stats-entry" style="flex-wrap:wrap">
+            <div class="se-date">${dateStr}${healthBadge}</div>
+            <div class="se-weight">${entry.weight ? entry.weight + ' <span>lbs</span>' : '<span>—</span>'}</div>
             <div class="se-bf">${entry.bf ? entry.bf + "%" : ""}</div>
             <div class="se-notes">${entry.notes ? e(entry.notes) : ""}</div>
             <button class="se-del" onclick="delStatEntry(${i})" title="Delete">✕</button>
+            ${extrasHtml}
           </div>`;
         });
         logHtml += '</div>';
@@ -7079,6 +7185,102 @@ All cycle percentages based on this number.`,
       }
 
       // ============================
+      // APPLE HEALTH SYNC
+      // ============================
+      function showToast(msg, duration) {
+        const el = document.getElementById("toast");
+        el.textContent = msg;
+        el.classList.add("show");
+        setTimeout(() => el.classList.remove("show"), duration || 3000);
+      }
+
+      function triggerHealthSync() {
+        // On iOS this opens the Shortcuts app to run the shortcut
+        window.location.href = "shortcuts://run-shortcut?name=Stauffer%20Health%20Sync";
+      }
+
+      function importHealthData(jsonStr) {
+        let healthData;
+        try { healthData = JSON.parse(jsonStr); }
+        catch { showToast("Failed to parse health data"); return; }
+
+        const data = getStats();
+        if (!data.entries) data.entries = [];
+
+        // Build set of dates that already have manual entries
+        const manualDates = new Set(
+          data.entries.filter((e) => e.source !== "apple_health").map((e) => e.date)
+        );
+
+        let imported = 0;
+        // Build set of existing apple_health dates to avoid duplicates
+        const healthDates = new Set(
+          data.entries.filter((e) => e.source === "apple_health").map((e) => e.date)
+        );
+
+        for (const [date, vals] of Object.entries(healthData)) {
+          // Never overwrite manual entries
+          if (manualDates.has(date)) continue;
+          // Update existing health entry or create new
+          if (healthDates.has(date)) {
+            const idx = data.entries.findIndex((e) => e.date === date && e.source === "apple_health");
+            if (idx > -1) {
+              data.entries[idx] = { ...data.entries[idx], ...buildHealthEntry(date, vals) };
+              imported++;
+            }
+          } else {
+            data.entries.push(buildHealthEntry(date, vals));
+            imported++;
+          }
+        }
+
+        data._lastHealthSync = new Date().toISOString();
+        saveStats(data);
+        renderStats();
+        showToast(`Synced ${imported} entries from Apple Health`);
+      }
+
+      function buildHealthEntry(date, vals) {
+        return {
+          date,
+          weight: vals.weight || null,
+          bf: vals.bodyFat || null,
+          restingHR: vals.restingHR || null,
+          activeCalories: vals.activeCalories || null,
+          sleep: vals.sleep || null,
+          vo2max: vals.vo2max || null,
+          hrv: vals.hrv || null,
+          notes: null,
+          source: "apple_health",
+        };
+      }
+
+      function updateLastSyncDisplay() {
+        const data = getStats();
+        const el = document.getElementById("stats-last-sync");
+        if (data._lastHealthSync) {
+          const d = new Date(data._lastHealthSync);
+          el.textContent = "Last synced: " + d.toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+        } else {
+          el.textContent = "";
+        }
+      }
+
+      function checkHealthUrlParam() {
+        const params = new URLSearchParams(window.location.search);
+        const dataParam = params.get("data");
+        if (dataParam) {
+          try {
+            importHealthData(decodeURIComponent(dataParam));
+          } catch (err) {
+            showToast("Error importing health data");
+          }
+          // Strip the param from URL
+          history.replaceState(null, "", window.location.pathname + window.location.hash);
+        }
+      }
+
+      // ============================
       // INIT
       // ============================
       // Set today's date as default for create form
@@ -7088,6 +7290,7 @@ All cycle percentages based on this number.`,
       buildList();
       render();
       renderDashboard();
+      checkHealthUrlParam();
 
       // Day card click → open modal (event delegation)
       document.getElementById("mc").addEventListener("click", function (evt) {
@@ -7101,5 +7304,6 @@ All cycle percentages based on this number.`,
       checkHash();
       window.addEventListener("hashchange", checkHash);
     </script>
+    <div class="toast" id="toast"></div>
   </body>
 </html>
