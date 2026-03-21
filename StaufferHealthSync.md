@@ -1,110 +1,132 @@
 # Stauffer Health Sync — Apple Shortcut Setup
 
 ## How It Works
-The Apple Shortcut reads health data from Apple Health (fed by your VeSync scale and Garmin watch), packages it as JSON, and opens the tracker webpage with the data as a URL parameter. The tracker auto-imports it.
+The Apple Shortcut reads health data from Apple Health (fed by your VeSync scale and Garmin watch), packages it as JSON, POSTs it to the `/api/health-sync` endpoint, which processes the data and redirects your browser back to the tracker with the formatted data. The tracker auto-imports it into localStorage.
 
-## Create the Shortcut
+## Architecture
 
-Open **Shortcuts** on your iPhone and create a new shortcut named **Stauffer Health Sync**.
+```
+iPhone Shortcuts → POST JSON → /api/health-sync (Vercel)
+                                     ↓
+                              Process & normalize
+                                     ↓
+                              302 Redirect → /?data=ENCODED_JSON
+                                     ↓
+                              Tracker imports to localStorage
+                              Shows toast "Synced X entries"
+```
 
-### Actions (in order):
+## Apple Shortcut Setup
 
-**1. Set Variable: startDate**
-- Action: `Date`  →  `Adjust Date` → subtract 60 days from Current Date
-- Save to variable `startDate`
+Your shortcut should have:
+1. **8 Find Health Samples blocks** (Weight, Body Fat %, Resting HR, Active Energy, Sleep, VO2 Max, HRV, Steps) — last 60 days each
+2. **A Dictionary action** that bundles all 8 sample arrays into a single object
+3. **A "Get Contents of URL" action** that POSTs to the API endpoint
 
-**2. Find Health Samples — Weight**
-- Type: Weight
-- Start Date: is after `startDate`
-- Sort by: Start Date (Newest First)
-- Group by: Day (take the latest reading per day)
-- Unit: lb
+### Final Actions (after your 8 Find Health Samples blocks):
 
-**3. Repeat with Each** (weight samples)
-- For each sample, extract: Start Date (formatted YYYY-MM-DD) and Value
-- Append to `weightDict` dictionary keyed by date
+**Step 9 — Build the payload dictionary**
+- Add Action → **Dictionary**
+- Add these keys, each set to the corresponding Find Health Samples result:
+  - `weight` → Weight samples
+  - `bodyFat` → Body Fat % samples
+  - `restingHR` → Resting Heart Rate samples
+  - `activeCalories` → Active Energy samples
+  - `sleep` → Sleep Analysis samples
+  - `vo2max` → VO2 Max samples
+  - `hrv` → HRV samples
+  - `steps` → Steps samples
 
-**4. Find Health Samples — Body Fat Percentage**
-- Type: Body Fat Percentage
-- Start Date: is after `startDate`
-- Group by: Day
+**Step 10 — POST to the API**
+- Add Action → **Get Contents of URL**
+- URL: `https://staufferstrength-conditioning.vercel.app/api/health-sync`
+- Method: **POST**
+- Request Body: **JSON**
+- Set the body to the **Dictionary** from Step 9
 
-**5. Find Health Samples — Resting Heart Rate**
-- Type: Resting Heart Rate
-- Start Date: is after `startDate`
-- Group by: Day
-- Unit: bpm
+**Step 11 — Open the redirect URL**
+The API returns a 302 redirect. Apple Shortcuts' "Get Contents of URL" follows redirects automatically, which loads the tracker page with the `?data=` parameter. However, to ensure it opens in Safari:
 
-**6. Find Health Samples — Active Energy Burned**
-- Type: Active Energy
-- Start Date: is after `startDate`
-- Group by: Day (Sum)
-- Unit: kcal
+- Add Action → **Open URLs**
+- URL: `https://staufferstrength-conditioning.vercel.app`
 
-**7. Find Health Samples — Sleep Analysis**
-- Type: Sleep Analysis
-- Start Date: is after `startDate`
-- Category: Asleep
-- Group by: Day (Sum duration in hours)
+The data import happens via the redirect, and the tracker page will show the toast notification.
 
-**8. Find Health Samples — VO2 Max**
-- Type: VO2 Max
-- Start Date: is after `startDate`
-- Group by: Day
+**Alternative (if redirect doesn't auto-open Safari):**
+If the redirect from the API doesn't open Safari automatically:
+- After "Get Contents of URL", the result will be the HTML page
+- Instead, change the flow: use **Get Contents of URL** with "Don't Follow Redirects" and extract the `Location` header, then **Open URLs** with that Location value
 
-**9. Find Health Samples — Heart Rate Variability**
-- Type: Heart Rate Variability (SDNN)
-- Start Date: is after `startDate`
-- Group by: Day
-- Unit: ms
+## API Endpoint Details
 
-**10. Build JSON**
-- For each unique date across all samples, create an object:
+**URL**: `https://staufferstrength-conditioning.vercel.app/api/health-sync`
+**Method**: POST
+**Content-Type**: application/json
+
+**Request body**:
+```json
+{
+  "weight": [array of health samples],
+  "bodyFat": [array of health samples],
+  "restingHR": [array of health samples],
+  "heartRate": [array of health samples],
+  "activeCalories": [array of health samples],
+  "sleep": [array of health samples],
+  "hrv": [array of health samples],
+  "steps": [array of health samples],
+  "vo2max": [array of health samples]
+}
+```
+
+Each health sample from Shortcuts contains a `date` (or `Start Date`) and a `value` (or `Value`/`qty`).
+
+**Response**: 302 redirect to `/?data=ENCODED_JSON`
+
+**Processed output format**:
 ```json
 {
   "2026-03-21": {
     "weight": 185.4,
     "bodyFat": 22.1,
     "restingHR": 58,
+    "heartRate": 72,
     "activeCalories": 620,
     "sleep": 7.4,
     "vo2max": 48.2,
-    "hrv": 62
+    "hrv": 62,
+    "steps": 8420
   }
 }
 ```
-- Use a Dictionary action to merge all metrics by date
-- Convert to JSON text
 
-**11. URL Encode the JSON**
-- Action: `URL Encode` the JSON text
-
-**12. Open URL**
-- Open: `https://YOUR-VERCEL-DOMAIN/?data=[URL Encoded JSON]`
-- Replace `YOUR-VERCEL-DOMAIN` with your actual deployment URL
-
-## Simplified Version (Weight + Body Fat Only)
-
-If the full version is too complex, start with just weight and body fat:
-
-1. Find Health Samples: Weight (last 60 days, group by day)
-2. Find Health Samples: Body Fat % (last 60 days, group by day)
-3. Build dictionary keyed by date with `weight` and `bodyFat`
-4. Convert to JSON → URL Encode → Open URL with `?data=` param
+**Processing notes**:
+- Dates normalized to `yyyy-MM-dd` format
+- Sleep auto-converts from seconds to hours if value > 24
+- Active Calories and Steps are summed per day (multiple samples)
+- All other metrics take the latest value per day
+- Missing metric arrays are skipped gracefully
 
 ## Testing
 
-You can test the import by visiting your tracker URL with a test parameter:
-```
-https://YOUR-DOMAIN/?data=%7B%222026-03-21%22%3A%7B%22weight%22%3A185.4%2C%22bodyFat%22%3A22.1%2C%22restingHR%22%3A58%7D%7D
+Test the API directly with curl:
+```bash
+curl -X POST https://staufferstrength-conditioning.vercel.app/api/health-sync \
+  -H "Content-Type: application/json" \
+  -d '{"weight":[{"date":"2026-03-21","value":185.4}],"restingHR":[{"date":"2026-03-21","value":58}]}' \
+  -v 2>&1 | grep Location
 ```
 
-This should show a toast "Synced 1 entries from Apple Health" and add the entry to your Stats log with a blue "⌚ Health" badge.
+You should see a `Location` header with the redirect URL containing `?data=...`
+
+Or test the import directly in your browser:
+```
+https://staufferstrength-conditioning.vercel.app/?data=%7B%222026-03-21%22%3A%7B%22weight%22%3A185.4%2C%22restingHR%22%3A58%7D%7D
+```
 
 ## Notes
 
 - Manual entries in the Stats tab are **never overwritten** by health sync
-- Health-imported entries are marked with `source: "apple_health"` and show a blue badge
-- The URL parameter is stripped after import (no reload needed)
-- The "Sync Apple Health" button in the Stats tab opens the Shortcut directly via `shortcuts://` URL scheme
-- All data stays in localStorage on your device
+- Health-imported entries show a blue "⌚ Health" badge
+- The URL parameter is stripped after import via `history.replaceState`
+- The "Sync Apple Health" button in the tracker opens the Shortcut via `shortcuts://` URL scheme
+- All data stays in localStorage on your device — the API endpoint is stateless

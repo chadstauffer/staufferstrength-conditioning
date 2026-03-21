@@ -6893,10 +6893,12 @@ All cycle percentages based on this number.`,
           // Build extra health metrics line
           let extras = [];
           if (entry.restingHR) extras.push(`<span>RHR ${entry.restingHR} bpm</span>`);
+          if (entry.heartRate) extras.push(`<span>HR ${entry.heartRate} bpm</span>`);
           if (entry.activeCalories) extras.push(`<span>${entry.activeCalories} kcal</span>`);
           if (entry.sleep) extras.push(`<span>${entry.sleep}h sleep</span>`);
           if (entry.vo2max) extras.push(`<span>VO₂ ${entry.vo2max}</span>`);
           if (entry.hrv) extras.push(`<span>HRV ${entry.hrv} ms</span>`);
+          if (entry.steps) extras.push(`<span>${entry.steps.toLocaleString()} steps</span>`);
           const extrasHtml = extras.length ? `<div class="se-health-extra">${extras.join("")}</div>` : "";
           logHtml += `<div class="stats-entry" style="flex-wrap:wrap">
             <div class="se-date">${dateStr}${healthBadge}</div>
@@ -7246,10 +7248,12 @@ All cycle percentages based on this number.`,
           weight: vals.weight || null,
           bf: vals.bodyFat || null,
           restingHR: vals.restingHR || null,
+          heartRate: vals.heartRate || null,
           activeCalories: vals.activeCalories || null,
           sleep: vals.sleep || null,
           vo2max: vals.vo2max || null,
           hrv: vals.hrv || null,
+          steps: vals.steps || null,
           notes: null,
           source: "apple_health",
         };
