@@ -1931,7 +1931,6 @@
     <div class="panel on" id="panel-dashboard">
       <div class="dash-header">
         <button class="stats-sync-btn" onclick="triggerHealthSync()">⌚ Sync Apple Health</button>
-        <button class="btn bg bsm" onclick="fetchAndImportHealth()">↓ Fetch Latest</button>
         <span class="stats-last-sync" id="dash-last-sync"></span>
       </div>
       <div class="dash-grid">
@@ -2156,7 +2155,6 @@
         <!-- Apple Health Sync -->
         <div class="stats-sync-row">
           <button class="stats-sync-btn" onclick="triggerHealthSync()">⌚ Sync Apple Health</button>
-          <button class="btn bg bsm" onclick="fetchAndImportHealth()">↓ Fetch Latest</button>
           <span class="stats-last-sync" id="stats-last-sync"></span>
         </div>
         <!-- Chart -->
@@ -5546,6 +5544,8 @@ All cycle percentages based on this number.`,
           setTimeout(renderDashboard, 200);
           return;
         }
+        // Silently fetch latest health data in background each time dashboard opens
+        fetchAndImportHealth(true);
         destroyAllDash();
         const logs = gl();
         const lks = Object.keys(logs);
@@ -7210,32 +7210,31 @@ All cycle percentages based on this number.`,
       }
 
       // Fetch latest health data from server and import
-      function fetchAndImportHealth() {
-        showToast("Fetching health data...", 5000);
+      // silent=true: no toasts unless new data actually imports (for background refresh)
+      function fetchAndImportHealth(silent) {
+        if (!silent) showToast("Fetching health data...", 5000);
         fetch("https://staufferstrength-conditioning.vercel.app/api/latest-health", { cache: "no-store" })
           .then((r) => r.json())
           .then((cached) => {
             if (!cached.data || Object.keys(cached.data).length === 0) {
-              showToast("No health data available — run your Apple Health Shortcut first");
+              if (!silent) showToast("No health data available — run your Apple Health Shortcut first");
               return;
             }
-            importHealthData(JSON.stringify(cached.data));
+            importHealthData(JSON.stringify(cached.data), silent);
           })
           .catch((err) => {
             console.error("[HealthSync] Fetch error:", err);
-            showToast("Failed to fetch health data: " + err.message);
+            if (!silent) showToast("Failed to fetch health data: " + err.message);
           });
       }
 
-      function importHealthData(jsonStr) {
+      function importHealthData(jsonStr, silent) {
         console.log("[HealthSync] importHealthData called, input length:", jsonStr?.length);
-        console.log("[HealthSync] input first 300:", jsonStr?.slice(0, 300));
         let healthData;
         try { healthData = JSON.parse(jsonStr); }
         catch (err) {
           console.error("[HealthSync] JSON.parse failed:", err.message);
-          console.error("[HealthSync] Input was:", jsonStr?.slice(0, 500));
-          showToast("Failed to parse health data");
+          if (!silent) showToast("Failed to parse health data");
           return;
         }
         console.log("[HealthSync] Parsed", Object.keys(healthData).length, "dates");
@@ -7272,8 +7271,13 @@ All cycle percentages based on this number.`,
 
         data._lastHealthSync = new Date().toISOString();
         saveStats(data);
-        renderStats();
-        showToast(`Synced ${imported} entries from Apple Health`);
+        if (imported > 0 || !silent) {
+          showToast(`Synced ${imported} entries from Apple Health`);
+          // Re-render dashboard if it's the active tab
+          if (document.getElementById("panel-dashboard")?.classList.contains("on")) {
+            renderDashboard();
+          }
+        }
       }
 
       function buildHealthEntry(date, vals) {
