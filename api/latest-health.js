@@ -1,6 +1,4 @@
-const fs = require("fs");
-
-module.exports = function handler(req, res) {
+module.exports = async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
@@ -8,14 +6,63 @@ module.exports = function handler(req, res) {
 
   if (req.method === "OPTIONS") return res.status(200).end();
 
-  // Read from /tmp file written by /api/health-sync
+  const kvUrl = process.env.KV_REST_API_URL;
+  const kvToken = process.env.KV_REST_API_TOKEN;
+
+  if (!kvUrl || !kvToken) {
+    console.error("KV_REST_API_URL or KV_REST_API_TOKEN not set");
+    return res.status(500).json({
+      data: null,
+      timestamp: null,
+      error: "Server misconfigured — Vercel KV credentials not set",
+    });
+  }
+
   try {
-    const raw = fs.readFileSync("/tmp/health-data.json", "utf-8");
-    const cached = JSON.parse(raw);
-    console.log("Serving cached health data from", cached.timestamp, "—", Object.keys(cached.data || {}).length, "dates");
-    return res.status(200).json(cached);
+    const kvResp = await fetch(`${kvUrl}/get/health-data`, {
+      headers: { Authorization: `Bearer ${kvToken}` },
+    });
+
+    if (!kvResp.ok) {
+      const errText = await kvResp.text();
+      console.error("Vercel KV get failed:", kvResp.status, errText);
+      return res.status(200).json({
+        data: null,
+        timestamp: null,
+        error: "Failed to read from KV store: " + kvResp.status,
+      });
+    }
+
+    const kvBody = await kvResp.json();
+    const stored = kvBody.result;
+
+    if (!stored) {
+      return res.status(200).json({
+        data: null,
+        timestamp: null,
+        error: "No health data synced yet. Run your Apple Health Shortcut first.",
+      });
+    }
+
+    // stored is a JSON string — parse it
+    let parsed;
+    try {
+      parsed = typeof stored === "string" ? JSON.parse(stored) : stored;
+    } catch {
+      parsed = { data: null, timestamp: null };
+    }
+
+    console.log("Serving health data synced at", parsed.timestamp, "—", Object.keys(parsed.data || {}).length, "dates");
+    return res.status(200).json({
+      data: parsed.data || null,
+      timestamp: parsed.timestamp || null,
+    });
   } catch (err) {
-    console.log("No cached health data found:", err.message);
-    return res.status(200).json({ data: null, timestamp: null, error: "No health data synced yet. Run your Apple Health Shortcut first." });
+    console.error("Error fetching health data:", err.message);
+    return res.status(200).json({
+      data: null,
+      timestamp: null,
+      error: "Server error: " + err.message,
+    });
   }
 };

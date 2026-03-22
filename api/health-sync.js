@@ -1,9 +1,4 @@
-// Module-level cache — persists across warm invocations
-let _latestHealthData = null;
-let _latestTimestamp = null;
-
-// Export cache for /api/latest-health to read
-module.exports = function handler(req, res) {
+module.exports = async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
@@ -26,7 +21,7 @@ module.exports = function handler(req, res) {
   console.log("=======================");
 
   if (!rawStr) {
-    return sendResult(res, {});
+    return await sendResult(res, {});
   }
 
   const metricKeys = ["weight", "bodyFat", "restingHR", "heartRate", "activeCalories", "sleep", "hrv", "steps", "vo2max"];
@@ -51,12 +46,12 @@ module.exports = function handler(req, res) {
     extractFromText(rawStr, result, metricKeys);
   }
 
-  return sendResult(res, result);
+  return await sendResult(res, result);
 
   // ═══════════════════════════════════════════
   // Send response — always 200 with URL
   // ═══════════════════════════════════════════
-  function sendResult(res, result) {
+  async function sendResult(res, result) {
     // Cap to most recent 60 days
     const sortedDates = Object.keys(result).sort().reverse().slice(0, 60);
     const capped = {};
@@ -69,19 +64,33 @@ module.exports = function handler(req, res) {
     console.log("Data:", JSON.stringify(capped).slice(0, 1500));
     console.log("==============");
 
-    // Store in module-level cache AND /tmp file for /api/latest-health
-    _latestHealthData = capped;
-    _latestTimestamp = new Date().toISOString();
-    console.log("Cached health data at", _latestTimestamp);
-    try {
-      const fs = require("fs");
-      fs.writeFileSync("/tmp/health-data.json", JSON.stringify({ data: capped, timestamp: _latestTimestamp }));
-      console.log("Wrote /tmp/health-data.json");
-    } catch (err) {
-      console.error("Failed to write /tmp:", err.message);
+    // Store to Vercel KV for /api/latest-health to read
+    const timestamp = new Date().toISOString();
+    const kvUrl = process.env.KV_REST_API_URL;
+    const kvToken = process.env.KV_REST_API_TOKEN;
+
+    if (!kvUrl || !kvToken) {
+      console.error("KV_REST_API_URL or KV_REST_API_TOKEN not set!");
+      console.log("Env keys with KV:", Object.keys(process.env).filter((k) => k.includes("KV")).join(", ") || "none");
+    } else {
+      try {
+        const kvPayload = JSON.stringify({ data: capped, timestamp });
+        const kvResp = await fetch(`${kvUrl}/set/health-data`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${kvToken}` },
+          body: JSON.stringify(kvPayload),
+        });
+        if (kvResp.ok) {
+          console.log("Vercel KV set OK:", kvResp.status);
+        } else {
+          const errText = await kvResp.text();
+          console.error("Vercel KV set failed:", kvResp.status, errText);
+        }
+      } catch (err) {
+        console.error("Vercel KV error:", err.message);
+      }
     }
 
-    // Return a short clean URL — the tracker will fetch data via /api/latest-health
     const syncUrl = "https://staufferstrength-conditioning.vercel.app/?healthsync=1";
     res.status(200).setHeader("Content-Type", "text/plain").send(syncUrl);
   }
@@ -330,9 +339,4 @@ module.exports = function handler(req, res) {
   function fmtDate(d) {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   }
-};
-
-// Expose cache for /api/latest-health
-module.exports._getCache = function () {
-  return { data: _latestHealthData, timestamp: _latestTimestamp };
 };
