@@ -8,15 +8,23 @@ module.exports = async function handler(req, res) {
 
   if (req.method === "OPTIONS") return res.status(200).end();
 
-  console.log("EDGE_CONFIG:", process.env.EDGE_CONFIG?.substring(0, 80));
+  const rawEdgeConfig = process.env.EDGE_CONFIG || "";
+  console.log("EDGE_CONFIG:", rawEdgeConfig.substring(0, 80));
 
-  if (!process.env.EDGE_CONFIG) {
+  if (!rawEdgeConfig) {
     console.error("EDGE_CONFIG env var not set");
     return res.status(500).json({ data: null, timestamp: null, error: "EDGE_CONFIG not configured" });
   }
 
+  // Build connection string — EDGE_CONFIG may be just the ID (ecfg_xxx) or the full URL
+  const connectionString = rawEdgeConfig.startsWith("ecfg_")
+    ? `https://edge-config.vercel.com/${rawEdgeConfig}?token=${process.env.VERCEL_TOKEN}`
+    : rawEdgeConfig;
+
+  console.log("Connection string:", connectionString.substring(0, 80));
+
   try {
-    const edgeConfig = createClient(process.env.EDGE_CONFIG);
+    const edgeConfig = createClient(connectionString);
     const stored = await edgeConfig.get("health-data");
 
     if (!stored || !stored.data) {
