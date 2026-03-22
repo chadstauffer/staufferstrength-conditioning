@@ -13,33 +13,129 @@ module.exports = function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
+  // ── Parse the body from multiple possible formats ──
   let body = req.body;
 
-  // Vercel auto-parses JSON bodies, but handle string case
+  // Case 1: Vercel gave us a Buffer (raw body, no Content-Type: application/json)
+  if (Buffer.isBuffer(body)) {
+    body = body.toString("utf-8");
+  }
+
+  // Case 2: Body is a string — try JSON.parse
   if (typeof body === "string") {
+    // Trim whitespace and BOM
+    body = body.trim().replace(/^\uFEFF/, "");
+    if (!body) {
+      console.error("Empty request body string");
+      return res.status(400).json({ error: "Invalid data" });
+    }
     try {
       body = JSON.parse(body);
-    } catch {
-      console.error("Failed to parse request body as JSON");
-      return res.status(400).json({ error: "Invalid data" });
+    } catch (err) {
+      console.error("Failed to JSON.parse body:", err.message, "| First 200 chars:", body.slice(0, 200));
+      return res.status(400).json({ error: "Invalid JSON in request body" });
     }
   }
 
+  // Case 3: Body is already an object (Vercel auto-parsed)
   if (!body || typeof body !== "object") {
-    console.error("Empty or malformed request body:", body);
+    console.error("Body is not an object after parsing. Type:", typeof body);
     return res.status(400).json({ error: "Invalid data" });
   }
 
-  console.log(
-    "Received health data — keys:",
-    Object.keys(body),
-    "sample counts:",
-    Object.fromEntries(
-      Object.entries(body).map(([k, v]) => [k, Array.isArray(v) ? v.length : "not array"])
-    )
-  );
+  console.log("Received health data — keys:", Object.keys(body));
+  for (const [k, v] of Object.entries(body)) {
+    const desc = Array.isArray(v)
+      ? `array[${v.length}]`
+      : typeof v === "string"
+        ? `string(${v.length} chars)`
+        : typeof v;
+    console.log(`  ${k}: ${desc}`);
+  }
 
-  // Metric key mapping: incoming key -> output key
+  // ── Normalize each metric value into an array of sample objects ──
+  // Shortcuts may send: an array of objects, a single object, a string
+  // representation of the array, or other formats
+  function toSampleArray(raw) {
+    if (!raw) return [];
+    if (Array.isArray(raw)) return raw;
+    // If it's a string, try to parse it as JSON array
+    if (typeof raw === "string") {
+      const trimmed = raw.trim();
+      if (trimmed.startsWith("[") || trimmed.startsWith("{")) {
+        try {
+          const parsed = JSON.parse(trimmed);
+          return Array.isArray(parsed) ? parsed : [parsed];
+        } catch {
+          return [];
+        }
+      }
+      return [];
+    }
+    // Single object
+    if (typeof raw === "object") return [raw];
+    return [];
+  }
+
+  // ── Extract a date string from a sample ──
+  function extractDate(sample) {
+    if (typeof sample === "string") {
+      // The sample itself might be a date string
+      const d = new Date(sample);
+      if (!isNaN(d)) return formatDate(d);
+      return null;
+    }
+    if (typeof sample !== "object" || !sample) return null;
+
+    // Try many possible date field names from Shortcuts
+    const rawDate =
+      sample.date ||
+      sample.Date ||
+      sample.startDate ||
+      sample.Start_Date ||
+      sample["Start Date"] ||
+      sample.start_date ||
+      sample.timestamp ||
+      sample.Timestamp;
+
+    if (!rawDate) return null;
+    const parsed = new Date(rawDate);
+    if (isNaN(parsed)) return null;
+    return formatDate(parsed);
+  }
+
+  function formatDate(d) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  }
+
+  // ── Extract a numeric value from a sample ──
+  function extractValue(sample) {
+    if (typeof sample === "number") return sample;
+    if (typeof sample === "string") {
+      const n = parseFloat(sample);
+      return isNaN(n) ? null : n;
+    }
+    if (typeof sample !== "object" || !sample) return null;
+
+    const raw =
+      sample.value ??
+      sample.Value ??
+      sample.qty ??
+      sample.Qty ??
+      sample.quantity ??
+      sample.Quantity ??
+      sample.duration ??
+      sample.Duration;
+
+    if (raw === null || raw === undefined) return null;
+    const n = parseFloat(raw);
+    return isNaN(n) ? null : n;
+  }
+
+  // ── Process all metrics ──
   const metricMap = {
     weight: "weight",
     bodyFat: "bodyFat",
@@ -53,39 +149,21 @@ module.exports = function handler(req, res) {
   };
 
   const result = {};
+  let totalSamples = 0;
 
   for (const [inKey, outKey] of Object.entries(metricMap)) {
-    const samples = body[inKey];
-    if (!Array.isArray(samples)) continue;
+    const samples = toSampleArray(body[inKey]);
+    if (!samples.length) continue;
 
+    let processedCount = 0;
     for (const sample of samples) {
-      // Extract date — Shortcuts sends various formats
-      let dateStr = null;
-      const rawDate =
-        sample.date || sample.Date || sample.startDate || sample.Start_Date || sample["Start Date"];
-
-      if (rawDate) {
-        // Try to parse and normalize to yyyy-MM-dd
-        const parsed = new Date(rawDate);
-        if (!isNaN(parsed)) {
-          const y = parsed.getFullYear();
-          const m = String(parsed.getMonth() + 1).padStart(2, "0");
-          const d = String(parsed.getDate()).padStart(2, "0");
-          dateStr = `${y}-${m}-${d}`;
-        }
-      }
-
+      const dateStr = extractDate(sample);
       if (!dateStr) continue;
 
-      // Extract value
-      let val =
-        sample.value ?? sample.Value ?? sample.qty ?? sample.Qty ?? sample.duration ?? sample.Duration;
+      let val = extractValue(sample);
+      if (val === null) continue;
 
-      if (val === null || val === undefined) continue;
-      val = parseFloat(val);
-      if (isNaN(val)) continue;
-
-      // Sleep: convert seconds to hours if value > 24 (clearly in seconds)
+      // Sleep: convert seconds to hours if value > 24
       if (outKey === "sleep" && val > 24) {
         val = +(val / 3600).toFixed(1);
       }
@@ -93,33 +171,38 @@ module.exports = function handler(req, res) {
       // Round to 1 decimal
       val = +val.toFixed(1);
 
-      // Initialize date entry if needed
       if (!result[dateStr]) result[dateStr] = {};
 
-      // For most metrics, keep the latest value per date (last write wins)
-      // For activeCalories and steps, sum within a day
+      // Sum for cumulative metrics, last-write-wins for others
       if (outKey === "activeCalories" || outKey === "steps") {
-        result[dateStr][outKey] = +(
-          (result[dateStr][outKey] || 0) + val
-        ).toFixed(1);
+        result[dateStr][outKey] = +((result[dateStr][outKey] || 0) + val).toFixed(1);
       } else {
         result[dateStr][outKey] = val;
       }
+      processedCount++;
     }
+    totalSamples += processedCount;
+    console.log(`  Processed ${inKey}: ${processedCount}/${samples.length} samples`);
   }
 
   const dateCount = Object.keys(result).length;
-  console.log("Processed", dateCount, "dates:", Object.keys(result).sort().slice(0, 5), "...");
+  console.log(`Total: ${totalSamples} samples across ${dateCount} dates`);
 
   if (dateCount === 0) {
-    return res.status(400).json({ error: "No valid samples found in data" });
+    console.error("No valid samples found. Body keys:", Object.keys(body));
+    return res.status(400).json({
+      error: "No valid samples found in data",
+      receivedKeys: Object.keys(body),
+      hint: "Each metric should be an array of objects with date and value fields",
+    });
   }
 
   // URL-encode the result and redirect
   const encoded = encodeURIComponent(JSON.stringify(result));
   const redirectUrl = `https://staufferstrength-conditioning.vercel.app/?data=${encoded}`;
 
-  // Redirect to tracker with data
+  console.log("Redirecting to tracker with", dateCount, "dates of data");
+
   res.writeHead(302, { Location: redirectUrl });
   res.end();
-}
+};
