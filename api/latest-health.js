@@ -1,4 +1,4 @@
-const { get } = require("@vercel/edge-config");
+const { createClient } = require("@vercel/edge-config");
 
 module.exports = async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -8,8 +8,16 @@ module.exports = async function handler(req, res) {
 
   if (req.method === "OPTIONS") return res.status(200).end();
 
+  console.log("EDGE_CONFIG:", process.env.EDGE_CONFIG?.substring(0, 80));
+
+  if (!process.env.EDGE_CONFIG) {
+    console.error("EDGE_CONFIG env var not set");
+    return res.status(500).json({ data: null, timestamp: null, error: "EDGE_CONFIG not configured" });
+  }
+
   try {
-    const stored = await get("health-data");
+    const edgeConfig = createClient(process.env.EDGE_CONFIG);
+    const stored = await edgeConfig.get("health-data");
 
     if (!stored || !stored.data) {
       console.log("No health data in Edge Config");

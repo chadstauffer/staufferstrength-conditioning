@@ -69,9 +69,13 @@ module.exports = async function handler(req, res) {
     const edgeConfigId = process.env.EDGE_CONFIG_ID;
     const vercelToken = process.env.VERCEL_TOKEN;
 
+    console.log("EDGE_CONFIG_ID:", edgeConfigId || "NOT SET");
+    console.log("VERCEL_TOKEN:", vercelToken ? vercelToken.substring(0, 8) + "..." : "NOT SET");
+    console.log("EDGE_CONFIG:", process.env.EDGE_CONFIG?.substring(0, 80) || "NOT SET");
+
     if (!edgeConfigId || !vercelToken) {
       console.error("EDGE_CONFIG_ID or VERCEL_TOKEN not set!");
-      console.log("Env keys:", Object.keys(process.env).filter((k) => k.includes("EDGE") || k.includes("VERCEL")).join(", ") || "none");
+      console.log("All env keys with EDGE/VERCEL:", Object.keys(process.env).filter((k) => k.includes("EDGE") || k.includes("VERCEL")).join(", ") || "none");
     } else {
       try {
         const ecResp = await fetch(`https://api.vercel.com/v1/edge-config/${edgeConfigId}/items`, {
