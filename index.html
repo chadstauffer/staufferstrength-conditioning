@@ -5541,6 +5541,11 @@ All cycle percentages based on this number.`,
       const FLAME_SVG = '<svg class="dash-streak-icon" width="14" height="18" viewBox="0 0 14 18"><path d="M7 0C7 0 3 5 3 9a4 4 0 0 0 8 0c0-4-4-9-4-9zM7 14a2 2 0 0 1-2-2c0-1.1.9-2.5 2-4 1.1 1.5 2 2.9 2 4a2 2 0 0 1-2 2z" fill="currentColor"/></svg>';
 
       function renderDashboard() {
+        if (typeof Chart === "undefined") {
+          console.log("Chart.js not loaded yet, retrying in 200ms");
+          setTimeout(renderDashboard, 200);
+          return;
+        }
         destroyAllDash();
         const logs = gl();
         const lks = Object.keys(logs);
@@ -6744,6 +6749,7 @@ All cycle percentages based on this number.`,
 
       let _statsChart = null;
       function renderStats() {
+        if (typeof Chart === "undefined") return;
         const data = getStats();
         const goal = data._goal || null;
         const entries = getStatsEntries();
