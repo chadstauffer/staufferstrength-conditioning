@@ -7279,6 +7279,7 @@ All cycle percentages based on this number.`,
       }
 
       function checkHealthUrlParam() {
+        alert("checkHealthUrlParam fired: " + window.location.search.substring(0, 100));
         console.log("[HealthSync] checkHealthUrlParam called");
         console.log("[HealthSync] href:", window.location.href.slice(0, 200));
         console.log("[HealthSync] search:", window.location.search.slice(0, 200));
@@ -7362,6 +7363,10 @@ All cycle percentages based on this number.`,
       // Hash routing on load + popstate
       checkHash();
       window.addEventListener("hashchange", checkHash);
+
+      // DEBUG: redundant call at very end of script
+      console.log("PAGE LOADED, URL:", window.location.href.substring(0, 200));
+      checkHealthUrlParam();
     </script>
     <div class="toast" id="toast"></div>
   </body>
