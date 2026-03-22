@@ -13,6 +13,21 @@ module.exports = function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
+  // ── DEBUG LOGGING ──
+  console.log("=== HEALTH-SYNC DEBUG ===");
+  console.log("Content-Type:", req.headers?.["content-type"] || "NOT SET");
+  console.log("Raw body type:", typeof req.body);
+  console.log("Raw body isBuffer:", Buffer.isBuffer(req.body));
+  if (Buffer.isBuffer(req.body)) {
+    console.log("Raw body (Buffer→string, first 500):", req.body.toString("utf-8").slice(0, 500));
+  } else if (typeof req.body === "string") {
+    console.log("Raw body (string, first 500):", req.body.slice(0, 500));
+  } else if (typeof req.body === "object") {
+    console.log("Raw body (object keys):", Object.keys(req.body || {}));
+    try { console.log("Raw body (JSON, first 500):", JSON.stringify(req.body).slice(0, 500)); } catch {}
+  }
+  console.log("========================");
+
   // ── Parse the body from multiple possible formats ──
   let body = req.body;
 
@@ -201,7 +216,11 @@ module.exports = function handler(req, res) {
   const encoded = encodeURIComponent(JSON.stringify(result));
   const syncUrl = `https://staufferstrength-conditioning.vercel.app/?data=${encoded}`;
 
-  console.log("Returning sync URL with", dateCount, "dates of data");
+  console.log("=== PARSED RESULT DEBUG ===");
+  console.log("Parsed data (first 500):", JSON.stringify(result).slice(0, 500));
+  console.log("Date count:", dateCount, "| Total samples:", totalSamples);
+  console.log("Returning sync URL length:", syncUrl.length);
+  console.log("===========================");
 
   res.status(200)
     .setHeader("Content-Type", "text/plain")
