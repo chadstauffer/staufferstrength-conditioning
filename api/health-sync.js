@@ -197,12 +197,13 @@ module.exports = function handler(req, res) {
     });
   }
 
-  // URL-encode the result and redirect
+  // Return plain text URL for Shortcuts "Open URLs" action
   const encoded = encodeURIComponent(JSON.stringify(result));
-  const redirectUrl = `https://staufferstrength-conditioning.vercel.app/?data=${encoded}`;
+  const syncUrl = `https://staufferstrength-conditioning.vercel.app/?data=${encoded}`;
 
-  console.log("Redirecting to tracker with", dateCount, "dates of data");
+  console.log("Returning sync URL with", dateCount, "dates of data");
 
-  res.writeHead(302, { Location: redirectUrl });
-  res.end();
+  res.status(200)
+    .setHeader("Content-Type", "text/plain")
+    .send(syncUrl);
 };
