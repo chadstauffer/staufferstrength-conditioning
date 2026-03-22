@@ -52,18 +52,34 @@ module.exports = function handler(req, res) {
   // Send response — always 200 with URL
   // ═══════════════════════════════════════════
   function sendResult(res, result) {
-    const dateCount = Object.keys(result).length;
-    const sampleCount = Object.values(result).reduce((s, d) => s + Object.keys(d).length, 0);
+    // Cap to most recent 60 days to keep URL short
+    const sortedDates = Object.keys(result).sort().reverse().slice(0, 60);
+    const capped = {};
+    for (const d of sortedDates) capped[d] = result[d];
+
+    const dateCount = Object.keys(capped).length;
+    const sampleCount = Object.values(capped).reduce((s, d) => s + Object.keys(d).length, 0);
     console.log("=== RESULT ===");
     console.log("Dates:", dateCount, "| Metrics:", sampleCount);
-    console.log("Data:", JSON.stringify(result).slice(0, 1500));
+    console.log("Data:", JSON.stringify(capped).slice(0, 1500));
     console.log("==============");
 
-    // Always return 200 — even with empty data, let the tracker handle it
-    const payload = dateCount > 0 ? JSON.stringify(result) : "{}";
+    const payload = dateCount > 0 ? JSON.stringify(capped) : "{}";
     const encoded = encodeURIComponent(payload);
     const syncUrl = `https://staufferstrength-conditioning.vercel.app/?data=${encoded}`;
     console.log("URL length:", syncUrl.length);
+
+    if (syncUrl.length > 50000) {
+      console.warn("URL still too long! Trimming to 30 days...");
+      const trimmed = {};
+      const last30 = sortedDates.slice(0, 30);
+      for (const d of last30) trimmed[d] = capped[d];
+      const p2 = JSON.stringify(trimmed);
+      const e2 = encodeURIComponent(p2);
+      const url2 = `https://staufferstrength-conditioning.vercel.app/?data=${e2}`;
+      console.log("Trimmed URL length:", url2.length);
+      return res.status(200).setHeader("Content-Type", "text/plain").send(url2);
+    }
 
     res.status(200).setHeader("Content-Type", "text/plain").send(syncUrl);
   }
@@ -219,19 +235,51 @@ module.exports = function handler(req, res) {
   // ═══════════════════════════════════════════
   // Assign dates backward from today
   // ═══════════════════════════════════════════
+  // Cumulative metrics (steps, activeCalories, heartRate) get many
+  // sub-day readings from Shortcuts. Bucket them into daily totals
+  // (sum for steps/cal, average for HR) before assigning dates.
+  // Single-reading metrics (restingHR, hrv, sleep, weight, etc.)
+  // get one value per day as before.
   function assignDatesBackward(result, metric, nums) {
     if (!nums.length) return;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // Most recent value = today, previous = yesterday, etc.
-    // nums[0] is the most recent (Shortcuts returns newest first)
-    for (let i = 0; i < nums.length; i++) {
-      const d = new Date(today);
-      d.setDate(d.getDate() - i);
-      const dateStr = fmtDate(d);
-      let val = normalizeValue(metric, nums[i]);
-      addToResult(result, dateStr, metric, val);
+    const MAX_DAYS = 60;
+    const isCumulative = metric === "steps" || metric === "activeCalories";
+    const isAvgMulti = metric === "heartRate";
+
+    // If we have way more readings than days, bucket into daily groups
+    if (nums.length > MAX_DAYS && (isCumulative || isAvgMulti)) {
+      const readingsPerDay = Math.ceil(nums.length / MAX_DAYS);
+      console.log(`    ${metric}: ${nums.length} readings, bucketing ~${readingsPerDay}/day into ${MAX_DAYS} days`);
+
+      for (let day = 0; day < MAX_DAYS; day++) {
+        const start = day * readingsPerDay;
+        const end = Math.min(start + readingsPerDay, nums.length);
+        if (start >= nums.length) break;
+
+        const bucket = nums.slice(start, end);
+        let val;
+        if (isCumulative) {
+          val = bucket.reduce((s, n) => s + n, 0);
+        } else {
+          val = bucket.reduce((s, n) => s + n, 0) / bucket.length;
+        }
+        val = normalizeValue(metric, val);
+
+        const d = new Date(today);
+        d.setDate(d.getDate() - day);
+        addToResult(result, fmtDate(d), metric, val);
+      }
+    } else {
+      // One reading per day — cap at MAX_DAYS
+      const capped = nums.slice(0, MAX_DAYS);
+      for (let i = 0; i < capped.length; i++) {
+        const d = new Date(today);
+        d.setDate(d.getDate() - i);
+        addToResult(result, fmtDate(d), metric, normalizeValue(metric, capped[i]));
+      }
     }
   }
 
