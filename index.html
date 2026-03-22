@@ -5557,8 +5557,6 @@ All cycle percentages based on this number.`,
           setTimeout(renderDashboard, 200);
           return;
         }
-        // Silently fetch latest health data in background each time dashboard opens
-        fetchAndImportHealth(true);
         destroyAllDash();
         const logs = gl();
         const lks = Object.keys(logs);
@@ -5578,7 +5576,10 @@ All cycle percentages based on this number.`,
         // S1 — RECOVERY SCORE
         // ═══════════════════════════════════════
         const recoveryEl = document.getElementById("dash-recovery");
+        console.log("[Dashboard] allEntries:", allEntries.length, "| hasEntries:", hasEntries);
+        if (allEntries.length > 0) console.log("[Dashboard] latest entry:", JSON.stringify(allEntries[allEntries.length - 1]));
         const entriesWithRecovery = allEntries.filter((e) => e.hrv && e.restingHR && e.sleep);
+        console.log("[Dashboard] entriesWithRecovery:", entriesWithRecovery.length);
         if (entriesWithRecovery.length >= 2) {
           const latest = entriesWithRecovery[entriesWithRecovery.length - 1];
           const last30 = entriesWithRecovery.slice(-30);
@@ -5947,7 +5948,7 @@ All cycle percentages based on this number.`,
         document
           .getElementById("panel-" + el.dataset.panel)
           .classList.add("on");
-        if (el.dataset.panel === "dashboard") renderDashboard();
+        if (el.dataset.panel === "dashboard") { renderDashboard(); fetchAndImportHealth(true); }
         if (el.dataset.panel === "implements") renderImpls();
         if (el.dataset.panel === "benchmarks") renderBm();
         if (el.dataset.panel === "calendar") renderCal();
@@ -7290,12 +7291,13 @@ All cycle percentages based on this number.`,
 
         data._lastHealthSync = new Date().toISOString();
         saveStats(data);
+        console.log("[HealthSync] Saved", data.entries.length, "total entries, imported", imported, "new");
         if (imported > 0 || !silent) {
           showToast(`Synced ${imported} entries from Apple Health`);
-          // Re-render dashboard if it's the active tab
-          if (document.getElementById("panel-dashboard")?.classList.contains("on")) {
-            renderDashboard();
-          }
+        }
+        // Always re-render dashboard with fresh data
+        if (document.getElementById("panel-dashboard")?.classList.contains("on")) {
+          renderDashboard();
         }
       }
 
