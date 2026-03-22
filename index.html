@@ -2382,6 +2382,19 @@
       </div>
     </div>
 
+    <!-- Standalone Sync Modal -->
+    <div class="sched-dialog-overlay" id="sync-modal-overlay">
+      <div class="sched-dialog">
+        <h3 style="color:var(--ac3)">Sync Health Data</h3>
+        <p style="font-family:var(--mono);font-size:11px;color:var(--tx);line-height:1.8;margin-bottom:6px">Your health data syncs automatically every morning at 7 AM via Shortcuts Automation.</p>
+        <p style="font-family:var(--mono);font-size:10px;color:var(--mu);line-height:1.7;margin-bottom:14px">To sync manually: open the <strong>Shortcuts</strong> app and run <strong>Stauffer Health Sync</strong>, then come back here and tap Import.</p>
+        <div class="sched-actions" style="flex-direction:column;gap:8px">
+          <button class="btn ba" style="background:var(--ac3);width:100%;padding:10px" onclick="fetchAndImportHealth();document.getElementById('sync-modal-overlay').classList.remove('open')">Import Latest Data</button>
+          <button class="btn bg" style="width:100%" onclick="document.getElementById('sync-modal-overlay').classList.remove('open')">Close</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Swap WOD Modal -->
     <div class="swap-modal-overlay" id="swap-overlay">
       <div class="swap-modal">
@@ -7205,8 +7218,14 @@ All cycle percentages based on this number.`,
       }
 
       function triggerHealthSync() {
-        // On iOS this opens the Shortcuts app to run the shortcut
-        window.location.href = "shortcuts://run-shortcut?name=Stauffer%20Health%20Sync";
+        const isStandalone = window.navigator.standalone === true;
+        if (isStandalone) {
+          // In home screen Web Clip — show modal instead of breaking out
+          document.getElementById("sync-modal-overlay").classList.add("open");
+        } else {
+          // Regular Safari — open Shortcuts app directly
+          window.location.href = "shortcuts://run-shortcut?name=Stauffer%20Health%20Sync";
+        }
       }
 
       // Fetch latest health data from server and import

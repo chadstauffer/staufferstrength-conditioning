@@ -123,10 +123,41 @@ Or test the import directly in your browser:
 https://staufferstrength-conditioning.vercel.app/?data=%7B%222026-03-21%22%3A%7B%22weight%22%3A185.4%2C%22restingHR%22%3A58%7D%7D
 ```
 
+## Daily Auto-Sync (Shortcuts Automation)
+
+Set this up once so your health data syncs every morning without any manual action.
+
+1. Open **Shortcuts** on your iPhone
+2. Tap the **Automation** tab at the bottom
+3. Tap **+ New Automation** (or the **+** in the top right)
+4. Choose **Time of Day**
+5. Set time to **7:00 AM**
+6. Repeat: **Daily**
+7. Tap **Next**
+8. Tap **New Blank Automation**
+9. Tap **Add Action** → search for **Run Shortcut** → tap it
+10. Tap the blue **Shortcut** placeholder → select **Stauffer Health Sync**
+11. Tap **Next** (or **Done** in the top right)
+12. **Turn OFF "Ask Before Running"** — this is critical. The toggle should be off so it runs silently in the background
+13. Tap **Done**
+
+Every morning at 7 AM, your iPhone will:
+- Pull the last 60 days of health data from Apple Health
+- POST it to the API endpoint
+- The data is stored in Edge Config, ready for the tracker
+
+When you open the tracker app from your Home Screen, the Dashboard automatically fetches the latest data — no button tap needed.
+
+## Home Screen Web Clip
+
+When running as a Home Screen app (Add to Home Screen from Safari), the "Sync Apple Health" button shows a modal instead of opening the Shortcuts app — this preserves the app-like experience. The modal has an "Import Latest Data" button that fetches directly from the server.
+
+With the daily automation running, you typically never need to tap this button — data is already current when you open the app.
+
 ## Notes
 
 - Manual entries in the Stats tab are **never overwritten** by health sync
 - Health-imported entries show a blue "⌚ Health" badge
-- The URL parameter is stripped after import via `history.replaceState`
-- The "Sync Apple Health" button in the tracker opens the Shortcut via `shortcuts://` URL scheme
+- The Dashboard auto-fetches latest health data every time it opens
+- In standalone (Home Screen) mode, sync shows a modal instead of leaving the app
 - All data stays in localStorage on your device — the API endpoint is stateless
