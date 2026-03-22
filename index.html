@@ -1931,6 +1931,7 @@
     <div class="panel on" id="panel-dashboard">
       <div class="dash-header">
         <button class="stats-sync-btn" onclick="triggerHealthSync()">⌚ Sync Apple Health</button>
+        <button class="btn bg bsm" onclick="fetchAndImportHealth()">↓ Fetch Latest</button>
         <span class="stats-last-sync" id="dash-last-sync"></span>
       </div>
       <div class="dash-grid">
@@ -2155,6 +2156,7 @@
         <!-- Apple Health Sync -->
         <div class="stats-sync-row">
           <button class="stats-sync-btn" onclick="triggerHealthSync()">⌚ Sync Apple Health</button>
+          <button class="btn bg bsm" onclick="fetchAndImportHealth()">↓ Fetch Latest</button>
           <span class="stats-last-sync" id="stats-last-sync"></span>
         </div>
         <!-- Chart -->
@@ -7201,6 +7203,24 @@ All cycle percentages based on this number.`,
         window.location.href = "shortcuts://run-shortcut?name=Stauffer%20Health%20Sync";
       }
 
+      // Fetch latest health data from server and import
+      function fetchAndImportHealth() {
+        showToast("Fetching health data...", 5000);
+        fetch("https://staufferstrength-conditioning.vercel.app/api/latest-health", { cache: "no-store" })
+          .then((r) => r.json())
+          .then((cached) => {
+            if (!cached.data || Object.keys(cached.data).length === 0) {
+              showToast("No health data available — run your Apple Health Shortcut first");
+              return;
+            }
+            importHealthData(JSON.stringify(cached.data));
+          })
+          .catch((err) => {
+            console.error("[HealthSync] Fetch error:", err);
+            showToast("Failed to fetch health data: " + err.message);
+          });
+      }
+
       function importHealthData(jsonStr) {
         console.log("[HealthSync] importHealthData called, input length:", jsonStr?.length);
         console.log("[HealthSync] input first 300:", jsonStr?.slice(0, 300));
@@ -7279,65 +7299,34 @@ All cycle percentages based on this number.`,
       }
 
       function checkHealthUrlParam() {
-        alert("checkHealthUrlParam fired: " + window.location.search.substring(0, 100));
-        console.log("[HealthSync] checkHealthUrlParam called");
-        console.log("[HealthSync] href:", window.location.href.slice(0, 200));
-        console.log("[HealthSync] search:", window.location.search.slice(0, 200));
-        console.log("[HealthSync] search length:", window.location.search.length);
+        console.log("[HealthSync] checkHealthUrlParam — search:", window.location.search);
+        const params = new URLSearchParams(window.location.search);
 
-        // Show debug banner if any query params present
-        if (window.location.search.includes("data=")) {
-          const banner = document.createElement("div");
-          banner.style.cssText = "position:fixed;top:0;left:0;right:0;z-index:99999;background:#4fa3e0;color:#000;font-family:monospace;font-size:12px;padding:8px 16px;text-align:center";
-          banner.textContent = "Health data parameter detected — importing... (search length: " + window.location.search.length + ")";
-          document.body.appendChild(banner);
-          setTimeout(() => banner.remove(), 10000);
-        }
-
-        // Try URLSearchParams first
-        let dataParam = new URLSearchParams(window.location.search).get("data");
-
-        // Fallback: manual extraction (URLSearchParams may fail on very long values)
-        if (!dataParam && window.location.search.includes("data=")) {
-          console.log("[HealthSync] URLSearchParams.get returned null, trying manual extraction");
-          const match = window.location.search.match(/[?&]data=(.+?)(?:&|$)/);
-          if (match) {
-            try {
-              dataParam = decodeURIComponent(match[1]);
-            } catch {
-              dataParam = match[1];
-            }
-          }
-        }
-
-        if (!dataParam) {
-          console.log("[HealthSync] No data param found");
+        // New approach: ?healthsync=1 triggers a fetch from /api/latest-health
+        if (params.get("healthsync") === "1") {
+          console.log("[HealthSync] healthsync=1 detected, fetching data...");
+          // Strip param immediately so refreshes don't re-trigger
+          history.replaceState(null, "", window.location.pathname + window.location.hash);
+          fetchAndImportHealth();
           return;
         }
 
-        console.log("[HealthSync] dataParam length:", dataParam.length);
-        console.log("[HealthSync] dataParam first 200:", dataParam.slice(0, 200));
-
-        // dataParam from URLSearchParams is already decoded — do NOT double-decode
-        // But if it still looks URL-encoded (starts with %7B), decode once
-        let jsonStr = dataParam;
-        if (jsonStr.startsWith("%7B") || jsonStr.startsWith("%5B")) {
-          console.log("[HealthSync] Looks URL-encoded, decoding once");
-          try { jsonStr = decodeURIComponent(jsonStr); } catch {}
+        // Legacy: ?data= param (direct JSON in URL)
+        const dataParam = params.get("data");
+        if (dataParam) {
+          console.log("[HealthSync] Legacy data= param, length:", dataParam.length);
+          history.replaceState(null, "", window.location.pathname + window.location.hash);
+          let jsonStr = dataParam;
+          if (jsonStr.startsWith("%7B")) {
+            try { jsonStr = decodeURIComponent(jsonStr); } catch {}
+          }
+          try {
+            importHealthData(jsonStr);
+          } catch (err) {
+            console.error("[HealthSync] Import error:", err);
+            showToast("Error importing health data");
+          }
         }
-
-        console.log("[HealthSync] jsonStr first 200:", jsonStr.slice(0, 200));
-
-        try {
-          importHealthData(jsonStr);
-          console.log("[HealthSync] Import completed successfully");
-        } catch (err) {
-          console.error("[HealthSync] Import error:", err);
-          showToast("Error importing health data: " + err.message);
-        }
-
-        // Strip the param from URL
-        history.replaceState(null, "", window.location.pathname + window.location.hash);
       }
 
       // ============================
@@ -7364,9 +7353,6 @@ All cycle percentages based on this number.`,
       checkHash();
       window.addEventListener("hashchange", checkHash);
 
-      // DEBUG: redundant call at very end of script
-      console.log("PAGE LOADED, URL:", window.location.href.substring(0, 200));
-      checkHealthUrlParam();
     </script>
     <div class="toast" id="toast"></div>
   </body>

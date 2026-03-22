@@ -1,3 +1,8 @@
+// Module-level cache — persists across warm invocations
+let _latestHealthData = null;
+let _latestTimestamp = null;
+
+// Export cache for /api/latest-health to read
 module.exports = function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
@@ -52,7 +57,7 @@ module.exports = function handler(req, res) {
   // Send response — always 200 with URL
   // ═══════════════════════════════════════════
   function sendResult(res, result) {
-    // Cap to most recent 60 days to keep URL short
+    // Cap to most recent 60 days
     const sortedDates = Object.keys(result).sort().reverse().slice(0, 60);
     const capped = {};
     for (const d of sortedDates) capped[d] = result[d];
@@ -64,23 +69,20 @@ module.exports = function handler(req, res) {
     console.log("Data:", JSON.stringify(capped).slice(0, 1500));
     console.log("==============");
 
-    const payload = dateCount > 0 ? JSON.stringify(capped) : "{}";
-    const encoded = encodeURIComponent(payload);
-    const syncUrl = `https://staufferstrength-conditioning.vercel.app/?data=${encoded}`;
-    console.log("URL length:", syncUrl.length);
-
-    if (syncUrl.length > 50000) {
-      console.warn("URL still too long! Trimming to 30 days...");
-      const trimmed = {};
-      const last30 = sortedDates.slice(0, 30);
-      for (const d of last30) trimmed[d] = capped[d];
-      const p2 = JSON.stringify(trimmed);
-      const e2 = encodeURIComponent(p2);
-      const url2 = `https://staufferstrength-conditioning.vercel.app/?data=${e2}`;
-      console.log("Trimmed URL length:", url2.length);
-      return res.status(200).setHeader("Content-Type", "text/plain").send(url2);
+    // Store in module-level cache AND /tmp file for /api/latest-health
+    _latestHealthData = capped;
+    _latestTimestamp = new Date().toISOString();
+    console.log("Cached health data at", _latestTimestamp);
+    try {
+      const fs = require("fs");
+      fs.writeFileSync("/tmp/health-data.json", JSON.stringify({ data: capped, timestamp: _latestTimestamp }));
+      console.log("Wrote /tmp/health-data.json");
+    } catch (err) {
+      console.error("Failed to write /tmp:", err.message);
     }
 
+    // Return a short clean URL — the tracker will fetch data via /api/latest-health
+    const syncUrl = "https://staufferstrength-conditioning.vercel.app/?healthsync=1";
     res.status(200).setHeader("Content-Type", "text/plain").send(syncUrl);
   }
 
@@ -328,4 +330,9 @@ module.exports = function handler(req, res) {
   function fmtDate(d) {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   }
+};
+
+// Expose cache for /api/latest-health
+module.exports._getCache = function () {
+  return { data: _latestHealthData, timestamp: _latestTimestamp };
 };
