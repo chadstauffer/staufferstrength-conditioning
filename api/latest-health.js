@@ -1,3 +1,5 @@
+const { get } = require("@vercel/edge-config");
+
 module.exports = async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
@@ -6,37 +8,11 @@ module.exports = async function handler(req, res) {
 
   if (req.method === "OPTIONS") return res.status(200).end();
 
-  const kvUrl = process.env.KV_REST_API_URL;
-  const kvToken = process.env.KV_REST_API_TOKEN;
-
-  if (!kvUrl || !kvToken) {
-    console.error("KV_REST_API_URL or KV_REST_API_TOKEN not set");
-    return res.status(500).json({
-      data: null,
-      timestamp: null,
-      error: "Server misconfigured — Vercel KV credentials not set",
-    });
-  }
-
   try {
-    const kvResp = await fetch(`${kvUrl}/get/health-data`, {
-      headers: { Authorization: `Bearer ${kvToken}` },
-    });
+    const stored = await get("health-data");
 
-    if (!kvResp.ok) {
-      const errText = await kvResp.text();
-      console.error("Vercel KV get failed:", kvResp.status, errText);
-      return res.status(200).json({
-        data: null,
-        timestamp: null,
-        error: "Failed to read from KV store: " + kvResp.status,
-      });
-    }
-
-    const kvBody = await kvResp.json();
-    const stored = kvBody.result;
-
-    if (!stored) {
+    if (!stored || !stored.data) {
+      console.log("No health data in Edge Config");
       return res.status(200).json({
         data: null,
         timestamp: null,
@@ -44,25 +20,17 @@ module.exports = async function handler(req, res) {
       });
     }
 
-    // stored is a JSON string — parse it
-    let parsed;
-    try {
-      parsed = typeof stored === "string" ? JSON.parse(stored) : stored;
-    } catch {
-      parsed = { data: null, timestamp: null };
-    }
-
-    console.log("Serving health data synced at", parsed.timestamp, "—", Object.keys(parsed.data || {}).length, "dates");
+    console.log("Serving health data synced at", stored.timestamp, "—", Object.keys(stored.data).length, "dates");
     return res.status(200).json({
-      data: parsed.data || null,
-      timestamp: parsed.timestamp || null,
+      data: stored.data,
+      timestamp: stored.timestamp,
     });
   } catch (err) {
-    console.error("Error fetching health data:", err.message);
+    console.error("Edge Config read error:", err.message);
     return res.status(200).json({
       data: null,
       timestamp: null,
-      error: "Server error: " + err.message,
+      error: "Failed to read health data: " + err.message,
     });
   }
 };

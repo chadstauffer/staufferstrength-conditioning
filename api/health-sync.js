@@ -64,30 +64,34 @@ module.exports = async function handler(req, res) {
     console.log("Data:", JSON.stringify(capped).slice(0, 1500));
     console.log("==============");
 
-    // Store to Vercel KV for /api/latest-health to read
+    // Store to Vercel Edge Config for /api/latest-health to read
     const timestamp = new Date().toISOString();
-    const kvUrl = process.env.KV_REST_API_URL;
-    const kvToken = process.env.KV_REST_API_TOKEN;
+    const edgeConfigId = process.env.EDGE_CONFIG_ID;
+    const vercelToken = process.env.VERCEL_TOKEN;
 
-    if (!kvUrl || !kvToken) {
-      console.error("KV_REST_API_URL or KV_REST_API_TOKEN not set!");
-      console.log("Env keys with KV:", Object.keys(process.env).filter((k) => k.includes("KV")).join(", ") || "none");
+    if (!edgeConfigId || !vercelToken) {
+      console.error("EDGE_CONFIG_ID or VERCEL_TOKEN not set!");
+      console.log("Env keys:", Object.keys(process.env).filter((k) => k.includes("EDGE") || k.includes("VERCEL")).join(", ") || "none");
     } else {
       try {
-        const kvPayload = JSON.stringify({ data: capped, timestamp });
-        const kvResp = await fetch(`${kvUrl}/set/health-data`, {
-          method: "POST",
-          headers: { Authorization: `Bearer ${kvToken}` },
-          body: JSON.stringify(kvPayload),
+        const ecResp = await fetch(`https://api.vercel.com/v1/edge-config/${edgeConfigId}/items`, {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${vercelToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            items: [{ operation: "upsert", key: "health-data", value: { data: capped, timestamp } }],
+          }),
         });
-        if (kvResp.ok) {
-          console.log("Vercel KV set OK:", kvResp.status);
+        if (ecResp.ok) {
+          console.log("Edge Config upsert OK:", ecResp.status);
         } else {
-          const errText = await kvResp.text();
-          console.error("Vercel KV set failed:", kvResp.status, errText);
+          const errText = await ecResp.text();
+          console.error("Edge Config upsert failed:", ecResp.status, errText);
         }
       } catch (err) {
-        console.error("Vercel KV error:", err.message);
+        console.error("Edge Config error:", err.message);
       }
     }
 
