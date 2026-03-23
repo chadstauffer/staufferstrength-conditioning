@@ -5587,12 +5587,9 @@ All cycle percentages based on this number.`,
               window._serverHealthTimestamp = json.timestamp || new Date().toISOString();
               dashLog('stored ' + window._serverHealthEntries.length + ' entries');
               dashLog('sample: ' + JSON.stringify(window._serverHealthEntries[0]));
-              // Re-render dashboard with fresh data
-              try {
-                renderDashboard();
-              } catch (renderErr) {
-                dashLog('ERROR in renderDashboard: ' + renderErr.message + '\n' + renderErr.stack);
-              }
+              dashLog('calling renderDashboard now...');
+              renderDashboard();
+              dashLog('renderDashboard returned');
               return window._serverHealthEntries.length;
             }
             dashLog('no data in response');
