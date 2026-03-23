@@ -5556,6 +5556,14 @@ All cycle percentages based on this number.`,
       window._serverHealthTimestamp = null;
 
       function refreshHealthFromServer(silent) {
+        // 5-minute throttle to prevent excessive polling
+        var FIVE_MIN = 5 * 60 * 1000;
+        if (Date.now() - (window._lastHealthFetch || 0) < FIVE_MIN && window._serverHealthEntries.length > 0) {
+          console.log("[HealthSync] Throttled — last fetch was", Math.round((Date.now() - window._lastHealthFetch) / 1000), "s ago");
+          return Promise.resolve(window._serverHealthEntries.length);
+        }
+        window._lastHealthFetch = Date.now();
+
         return fetch("https://staufferstrength-conditioning.vercel.app/api/latest-health", { cache: "no-store" })
           .then(function (r) { return r.json(); })
           .then(function (json) {
@@ -5568,6 +5576,10 @@ All cycle percentages based on this number.`,
               }
               window._serverHealthTimestamp = json.timestamp || new Date().toISOString();
               console.log("[HealthSync] Fetched", window._serverHealthEntries.length, "entries from server");
+              // Re-render dashboard immediately with fresh data
+              if (document.getElementById("panel-dashboard")?.classList.contains("on")) {
+                renderDashboard();
+              }
               return window._serverHealthEntries.length;
             }
             if (!silent) showToast("No health data available — run your Apple Health Shortcut first");
@@ -5698,10 +5710,17 @@ All cycle percentages based on this number.`,
         if (!hasEntries) {
           metricsEl.innerHTML = '<div class="dash-empty" style="grid-column:1/-1">Step on your scale and tap Sync Apple Health to get started</div>';
         } else {
+          // Use today's entry if available, otherwise fall back to most recent
+          const todayStr = new Date().toISOString().split("T")[0];
+          const todayEntry = allEntries.find((e) => e.date === todayStr) || allEntries[allEntries.length - 1];
+          console.log("[Dashboard] todayStr:", todayStr, "| using entry:", todayEntry?.date);
+
           let metricsHtml = "";
           metricDefs.forEach((def, mi) => {
             const withVal = allEntries.filter((e) => e[def.key] != null);
-            const current = withVal.length ? withVal[withVal.length - 1][def.key] : null;
+            // Current value: today's entry if it has this metric, else latest entry with this metric
+            const current = (todayEntry && todayEntry[def.key] != null) ? todayEntry[def.key]
+              : (withVal.length ? withVal[withVal.length - 1][def.key] : null);
             const last7 = withVal.slice(-7);
             const avg7 = last7.length ? +(last7.reduce((s, e) => s + e[def.key], 0) / last7.length).toFixed(1) : null;
 
@@ -6030,7 +6049,7 @@ All cycle percentages based on this number.`,
         document
           .getElementById("panel-" + el.dataset.panel)
           .classList.add("on");
-        if (el.dataset.panel === "dashboard") { renderDashboard(); refreshHealthFromServer(true).then(function () { renderDashboard(); }); }
+        if (el.dataset.panel === "dashboard") { renderDashboard(); refreshHealthFromServer(true); }
         if (el.dataset.panel === "implements") renderImpls();
         if (el.dataset.panel === "benchmarks") renderBm();
         if (el.dataset.panel === "calendar") renderCal();
@@ -7314,12 +7333,11 @@ All cycle percentages based on this number.`,
       // Fetch from server, update in-memory cache, re-render dashboard
       function fetchAndImportHealth(silent) {
         if (!silent) showToast("Fetching health data...", 5000);
+        // Force fetch even if throttled (user explicitly requested sync)
+        window._lastHealthFetch = 0;
         refreshHealthFromServer(silent).then(function (count) {
           if (count > 0 && !silent) {
             showToast("Synced " + count + " entries from Apple Health");
-          }
-          if (document.getElementById("panel-dashboard")?.classList.contains("on")) {
-            renderDashboard();
           }
           updateLastSyncDisplay();
         });
@@ -7400,11 +7418,7 @@ All cycle percentages based on this number.`,
       render();
       renderDashboard();
       // Fetch health data from server on load (works across Safari & Web Clip)
-      refreshHealthFromServer(true).then(function () {
-        if (document.getElementById("panel-dashboard")?.classList.contains("on")) {
-          renderDashboard();
-        }
-      });
+      refreshHealthFromServer(true);
       checkHealthUrlParam();
 
       // Day card click → open modal (event delegation)
