@@ -5622,7 +5622,9 @@ All cycle percentages based on this number.`,
             byDate[m.date] = Object.assign({}, m);
           }
         }
-        return Object.values(byDate);
+        var result = Object.values(byDate);
+        dashLog('getMergedEntries: server=' + window._serverHealthEntries.length + ' manual=' + manualEntries.length + ' merged=' + result.length);
+        return result;
       }
 
       function renderDashboard() {
@@ -5636,7 +5638,7 @@ All cycle percentages based on this number.`,
           dashLog('no server data yet, retry in 1.5s');
           setTimeout(renderDashboard, 1500);
         }
-        dashLog('rendering, entries: ' + (window._serverHealthEntries?.length || 0));
+        dashLog('renderDashboard START, server=' + (window._serverHealthEntries?.length || 0));
         try {
         destroyAllDash();
         const logs = gl();
@@ -5659,11 +5661,11 @@ All cycle percentages based on this number.`,
         // ═══════════════════════════════════════
         // S1 — RECOVERY SCORE
         // ═══════════════════════════════════════
+        dashLog('S1 recovery start');
         const recoveryEl = document.getElementById("dash-recovery");
-        console.log("[Dashboard] allEntries:", allEntries.length, "| hasEntries:", hasEntries);
-        if (allEntries.length > 0) console.log("[Dashboard] latest entry:", JSON.stringify(allEntries[allEntries.length - 1]));
+        dashLog('S1 recoveryEl: ' + (recoveryEl ? 'found' : 'NULL'));
         const entriesWithRecovery = allEntries.filter((e) => e.hrv && e.restingHR && e.sleep);
-        console.log("[Dashboard] entriesWithRecovery:", entriesWithRecovery.length);
+        dashLog('S1 entriesWithRecovery: ' + entriesWithRecovery.length);
         if (entriesWithRecovery.length >= 2) {
           const latest = entriesWithRecovery[entriesWithRecovery.length - 1];
           const last30 = entriesWithRecovery.slice(-30);
@@ -5710,11 +5712,14 @@ All cycle percentages based on this number.`,
         } else {
           recoveryEl.innerHTML = '<div class="dash-recovery-empty">Log more data to calculate recovery<br>Needs HRV, Resting HR, and Sleep</div>';
         }
+        dashLog('S1 recovery done');
 
         // ═══════════════════════════════════════
         // S2 — TODAY'S METRICS (6 cards)
         // ═══════════════════════════════════════
+        dashLog('S2 metrics start');
         const metricsEl = document.getElementById("dash-metrics");
+        dashLog('S2 metricsEl: ' + (metricsEl ? 'found' : 'NULL'));
         const metricDefs = [
           { key: "restingHR", label: "Resting HR", unit: "bpm", inverse: true },
           { key: "hrv", label: "HRV", unit: "ms", inverse: false },
@@ -5798,10 +5803,12 @@ All cycle percentages based on this number.`,
             });
           });
         }
+        dashLog('S2 metrics done');
 
         // ═══════════════════════════════════════
         // S3 — BODY WEIGHT TREND
         // ═══════════════════════════════════════
+        dashLog('S3 weight start');
         destroyDash("bw");
         const bwBanner = document.getElementById("dash-bw-banner");
         const bwWithWeight = allEntries.filter((e) => e.weight);
@@ -5890,9 +5897,12 @@ All cycle percentages based on this number.`,
           }
         }
 
+        dashLog('S3 weight done');
+
         // ═══════════════════════════════════════
         // S4 — WOD COMPLETION RING + STREAKS
         // ═══════════════════════════════════════
+        dashLog('S4 completion start');
         let done = 0, missed = 0, skipped = 0, total = 0;
         W.forEach((wk) => {
           wk.days.forEach((day) => {
@@ -5958,7 +5968,9 @@ All cycle percentages based on this number.`,
           `<div class="dash-streak-card"><div class="dash-streak-num" style="color:var(--ac2)">${FLAME_SVG}${longestStreak}</div><div class="dash-streak-sub">Longest Streak</div></div>`;
 
         // ═══════════════════════════════════════
+        dashLog('S4 completion done');
         // S5 — TRAINING VS RECOVERY CORRELATION
+        dashLog('S5 correlation start');
         // ═══════════════════════════════════════
         destroyDash("corr");
         const corrWrap = document.getElementById("dash-corr-wrap");
@@ -6052,7 +6064,8 @@ All cycle percentages based on this number.`,
           corrWrap.querySelectorAll(".dash-corr-empty").forEach((el) => el.remove());
           corrWrap.insertAdjacentHTML("beforeend", '<div class="dash-corr-empty">Complete more workouts and sync Apple Health to unlock this chart<br>Needs at least 10 matched WOD + next-day HRV data points</div>');
         }
-        dashLog('render complete');
+        dashLog('S5 correlation done');
+        dashLog('renderDashboard END');
         } catch (dashErr) {
           dashLog('ERROR render: ' + dashErr.message + '\n' + dashErr.stack);
         }
