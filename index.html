@@ -5576,9 +5576,14 @@ All cycle percentages based on this number.`,
               }
               window._serverHealthTimestamp = json.timestamp || new Date().toISOString();
               console.log("[HealthSync] Fetched", window._serverHealthEntries.length, "entries from server");
+              console.log("[HealthSync] Sample entry:", JSON.stringify(window._serverHealthEntries[0]));
               // Re-render dashboard immediately with fresh data
               if (document.getElementById("panel-dashboard")?.classList.contains("on")) {
-                renderDashboard();
+                try {
+                  renderDashboard();
+                } catch (renderErr) {
+                  console.error("[HealthSync] renderDashboard() threw:", renderErr);
+                }
               }
               return window._serverHealthEntries.length;
             }
@@ -5620,6 +5625,12 @@ All cycle percentages based on this number.`,
           setTimeout(renderDashboard, 200);
           return;
         }
+        // If server data hasn't arrived yet, schedule a re-render
+        if (!window._serverHealthEntries || window._serverHealthEntries.length === 0) {
+          console.log("[Dashboard] No server health data yet, will re-render in 1.5s");
+          setTimeout(renderDashboard, 1500);
+        }
+        try {
         destroyAllDash();
         const logs = gl();
         const lks = Object.keys(logs);
@@ -6032,6 +6043,9 @@ All cycle percentages based on this number.`,
           document.getElementById("dash-corr").style.display = "none";
           corrWrap.querySelectorAll(".dash-corr-empty").forEach((el) => el.remove());
           corrWrap.insertAdjacentHTML("beforeend", '<div class="dash-corr-empty">Complete more workouts and sync Apple Health to unlock this chart<br>Needs at least 10 matched WOD + next-day HRV data points</div>');
+        }
+        } catch (dashErr) {
+          console.error("[Dashboard] renderDashboard() CRASHED:", dashErr, dashErr.stack);
         }
       }
 
