@@ -1933,6 +1933,7 @@
         <button class="stats-sync-btn" onclick="triggerHealthSync()">⌚ Sync Apple Health</button>
         <span class="stats-last-sync" id="dash-last-sync"></span>
       </div>
+      <div id="dash-debug" style="font-family:monospace;font-size:11px;color:#f07020;padding:8px;background:#1a1a1a;border-radius:4px;margin:8px 0;min-height:40px;white-space:pre-wrap;word-break:break-all"></div>
       <div class="dash-grid">
         <!-- S1: Recovery Score -->
         <div class="dash-card">
@@ -5551,6 +5552,13 @@ All cycle percentages based on this number.`,
 
       const FLAME_SVG = '<svg class="dash-streak-icon" width="14" height="18" viewBox="0 0 14 18"><path d="M7 0C7 0 3 5 3 9a4 4 0 0 0 8 0c0-4-4-9-4-9zM7 14a2 2 0 0 1-2-2c0-1.1.9-2.5 2-4 1.1 1.5 2 2.9 2 4a2 2 0 0 1-2 2z" fill="currentColor"/></svg>';
 
+      // ── Debug panel ──
+      function dashLog(msg) {
+        var el = document.getElementById('dash-debug');
+        if (el) el.innerHTML += new Date().toLocaleTimeString() + ' ' + msg + '\n';
+        console.log('[DashDebug] ' + msg);
+      }
+
       // ── Server-side health data cache (replaces localStorage for health) ──
       window._serverHealthEntries = [];
       window._serverHealthTimestamp = null;
@@ -5559,14 +5567,16 @@ All cycle percentages based on this number.`,
         // 5-minute throttle to prevent excessive polling
         var FIVE_MIN = 5 * 60 * 1000;
         if (Date.now() - (window._lastHealthFetch || 0) < FIVE_MIN && window._serverHealthEntries.length > 0) {
-          console.log("[HealthSync] Throttled — last fetch was", Math.round((Date.now() - window._lastHealthFetch) / 1000), "s ago");
+          dashLog('throttled (' + window._serverHealthEntries.length + ' cached)');
           return Promise.resolve(window._serverHealthEntries.length);
         }
         window._lastHealthFetch = Date.now();
+        dashLog('fetching...');
 
         return fetch("https://staufferstrength-conditioning.vercel.app/api/latest-health", { cache: "no-store" })
           .then(function (r) { return r.json(); })
           .then(function (json) {
+            dashLog('got response, json.data keys: ' + (json.data ? Object.keys(json.data).length : 'null'));
             if (json.data && Object.keys(json.data).length > 0) {
               window._serverHealthEntries = [];
               for (var _d in json.data) {
@@ -5575,23 +5585,24 @@ All cycle percentages based on this number.`,
                 }
               }
               window._serverHealthTimestamp = json.timestamp || new Date().toISOString();
-              console.log("[HealthSync] Fetched", window._serverHealthEntries.length, "entries from server");
-              console.log("[HealthSync] Sample entry:", JSON.stringify(window._serverHealthEntries[0]));
+              dashLog('stored ' + window._serverHealthEntries.length + ' entries');
+              dashLog('sample: ' + JSON.stringify(window._serverHealthEntries[0]));
               // Re-render dashboard immediately with fresh data
               if (document.getElementById("panel-dashboard")?.classList.contains("on")) {
                 try {
                   renderDashboard();
                 } catch (renderErr) {
-                  console.error("[HealthSync] renderDashboard() threw:", renderErr);
+                  dashLog('ERROR in renderDashboard: ' + renderErr.message + '\n' + renderErr.stack);
                 }
               }
               return window._serverHealthEntries.length;
             }
+            dashLog('no data in response');
             if (!silent) showToast("No health data available — run your Apple Health Shortcut first");
             return 0;
           })
           .catch(function (err) {
-            console.error("[HealthSync] Server fetch error:", err);
+            dashLog('ERROR fetch: ' + err.message);
             if (!silent) showToast("Failed to fetch health data: " + err.message);
             return 0;
           });
@@ -5627,9 +5638,10 @@ All cycle percentages based on this number.`,
         }
         // If server data hasn't arrived yet, schedule a re-render
         if (!window._serverHealthEntries || window._serverHealthEntries.length === 0) {
-          console.log("[Dashboard] No server health data yet, will re-render in 1.5s");
+          dashLog('no server data yet, retry in 1.5s');
           setTimeout(renderDashboard, 1500);
         }
+        dashLog('rendering, entries: ' + (window._serverHealthEntries?.length || 0));
         try {
         destroyAllDash();
         const logs = gl();
@@ -5640,8 +5652,7 @@ All cycle percentages based on this number.`,
         const allEntries = getMergedEntries().sort((a, b) => a.date.localeCompare(b.date));
         const hasEntries = allEntries.length >= 3;
 
-        console.log('[Dashboard] server entries:', window._serverHealthEntries.length, '| merged entries:', allEntries.length);
-        if (allEntries.length > 0) console.log('[Dashboard] first:', JSON.stringify(allEntries[0]), '| last:', JSON.stringify(allEntries[allEntries.length - 1]));
+        dashLog('merged: ' + allEntries.length + ' | hasEntries: ' + hasEntries);
 
         // Last sync
         const syncEl = document.getElementById("dash-last-sync");
@@ -5719,12 +5730,14 @@ All cycle percentages based on this number.`,
         ];
 
         if (!hasEntries) {
+          dashLog('S2: no entries, showing empty state');
           metricsEl.innerHTML = '<div class="dash-empty" style="grid-column:1/-1">Step on your scale and tap Sync Apple Health to get started</div>';
         } else {
           // Use today's entry if available, otherwise fall back to most recent
           const todayStr = new Date().toISOString().split("T")[0];
           const todayEntry = allEntries.find((e) => e.date === todayStr) || allEntries[allEntries.length - 1];
-          console.log("[Dashboard] todayStr:", todayStr, "| using entry:", todayEntry?.date);
+          dashLog('S2: todayStr=' + todayStr + ' using=' + todayEntry?.date);
+          dashLog('todayEntry: ' + JSON.stringify(todayEntry));
 
           let metricsHtml = "";
           metricDefs.forEach((def, mi) => {
@@ -6044,8 +6057,9 @@ All cycle percentages based on this number.`,
           corrWrap.querySelectorAll(".dash-corr-empty").forEach((el) => el.remove());
           corrWrap.insertAdjacentHTML("beforeend", '<div class="dash-corr-empty">Complete more workouts and sync Apple Health to unlock this chart<br>Needs at least 10 matched WOD + next-day HRV data points</div>');
         }
+        dashLog('render complete');
         } catch (dashErr) {
-          console.error("[Dashboard] renderDashboard() CRASHED:", dashErr, dashErr.stack);
+          dashLog('ERROR render: ' + dashErr.message + '\n' + dashErr.stack);
         }
       }
 
