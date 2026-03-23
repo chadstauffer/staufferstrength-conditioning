@@ -5551,28 +5551,79 @@ All cycle percentages based on this number.`,
 
       const FLAME_SVG = '<svg class="dash-streak-icon" width="14" height="18" viewBox="0 0 14 18"><path d="M7 0C7 0 3 5 3 9a4 4 0 0 0 8 0c0-4-4-9-4-9zM7 14a2 2 0 0 1-2-2c0-1.1.9-2.5 2-4 1.1 1.5 2 2.9 2 4a2 2 0 0 1-2 2z" fill="currentColor"/></svg>';
 
+      // ── Server-side health data cache (replaces localStorage for health) ──
+      let _serverHealthEntries = [];
+      let _serverHealthTimestamp = null;
+
+      function refreshHealthFromServer(silent) {
+        return fetch("https://staufferstrength-conditioning.vercel.app/api/latest-health", { cache: "no-store" })
+          .then(function (r) { return r.json(); })
+          .then(function (json) {
+            if (json.data && Object.keys(json.data).length > 0) {
+              _serverHealthEntries = [];
+              for (var _d in json.data) {
+                if (json.data.hasOwnProperty(_d)) {
+                  _serverHealthEntries.push(buildHealthEntry(_d, json.data[_d]));
+                }
+              }
+              _serverHealthTimestamp = json.timestamp || new Date().toISOString();
+              console.log("[HealthSync] Fetched", _serverHealthEntries.length, "entries from server");
+              return _serverHealthEntries.length;
+            }
+            if (!silent) showToast("No health data available — run your Apple Health Shortcut first");
+            return 0;
+          })
+          .catch(function (err) {
+            console.error("[HealthSync] Server fetch error:", err);
+            if (!silent) showToast("Failed to fetch health data: " + err.message);
+            return 0;
+          });
+      }
+
+      // Merge server health entries with manual entries from localStorage
+      function getMergedEntries() {
+        var statsData = getStats();
+        var manualEntries = (statsData.entries || []).filter(function (e) { return e.source !== "apple_health"; });
+        var byDate = {};
+        // Health entries first (lower priority)
+        for (var i = 0; i < _serverHealthEntries.length; i++) {
+          var e = _serverHealthEntries[i];
+          byDate[e.date] = Object.assign({}, e);
+        }
+        // Manual entries override (higher priority — user-entered data wins)
+        for (var j = 0; j < manualEntries.length; j++) {
+          var m = manualEntries[j];
+          if (byDate[m.date]) {
+            for (var k in m) { if (m[k] != null) byDate[m.date][k] = m[k]; }
+          } else {
+            byDate[m.date] = Object.assign({}, m);
+          }
+        }
+        return Object.values(byDate);
+      }
+
       function renderDashboard() {
         if (typeof Chart === "undefined") {
           console.log("Chart.js not loaded yet, retrying in 200ms");
           setTimeout(renderDashboard, 200);
           return;
         }
-        const _dbgStats = getStats();
-        console.log('[Dashboard] entries:', _dbgStats?.entries?.length);
-        console.log('[Dashboard] first entry:', JSON.stringify(_dbgStats?.entries?.[0]));
-        console.log('[Dashboard] last entry:', JSON.stringify(_dbgStats?.entries?.[_dbgStats?.entries?.length - 1]));
         destroyAllDash();
         const logs = gl();
         const lks = Object.keys(logs);
         const schedMap = getSchedule();
         const statsData = getStats();
-        const allEntries = (statsData.entries || []).sort((a, b) => a.date.localeCompare(b.date));
+        // Health data from server cache, manual entries from localStorage
+        const allEntries = getMergedEntries().sort((a, b) => a.date.localeCompare(b.date));
         const hasEntries = allEntries.length >= 3;
+
+        console.log('[Dashboard] server entries:', _serverHealthEntries.length, '| merged entries:', allEntries.length);
+        if (allEntries.length > 0) console.log('[Dashboard] first:', JSON.stringify(allEntries[0]), '| last:', JSON.stringify(allEntries[allEntries.length - 1]));
 
         // Last sync
         const syncEl = document.getElementById("dash-last-sync");
-        if (statsData._lastHealthSync) {
-          const sd = new Date(statsData._lastHealthSync);
+        if (_serverHealthTimestamp) {
+          const sd = new Date(_serverHealthTimestamp);
           syncEl.textContent = "Last synced: " + sd.toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
         } else { syncEl.textContent = ""; }
 
@@ -5979,7 +6030,7 @@ All cycle percentages based on this number.`,
         document
           .getElementById("panel-" + el.dataset.panel)
           .classList.add("on");
-        if (el.dataset.panel === "dashboard") { renderDashboard(); fetchAndImportHealth(true); }
+        if (el.dataset.panel === "dashboard") { renderDashboard(); refreshHealthFromServer(true).then(function () { renderDashboard(); }); }
         if (el.dataset.panel === "implements") renderImpls();
         if (el.dataset.panel === "benchmarks") renderBm();
         if (el.dataset.panel === "calendar") renderCal();
@@ -7260,76 +7311,18 @@ All cycle percentages based on this number.`,
         }
       }
 
-      // Fetch latest health data from server and import
-      // silent=true: no toasts unless new data actually imports (for background refresh)
+      // Fetch from server, update in-memory cache, re-render dashboard
       function fetchAndImportHealth(silent) {
         if (!silent) showToast("Fetching health data...", 5000);
-        fetch("https://staufferstrength-conditioning.vercel.app/api/latest-health", { cache: "no-store" })
-          .then((r) => r.json())
-          .then((cached) => {
-            if (!cached.data || Object.keys(cached.data).length === 0) {
-              if (!silent) showToast("No health data available — run your Apple Health Shortcut first");
-              return;
-            }
-            importHealthData(JSON.stringify(cached.data), silent);
-          })
-          .catch((err) => {
-            console.error("[HealthSync] Fetch error:", err);
-            if (!silent) showToast("Failed to fetch health data: " + err.message);
-          });
-      }
-
-      function importHealthData(jsonStr, silent) {
-        console.log("[HealthSync] importHealthData called, input length:", jsonStr?.length);
-        let healthData;
-        try { healthData = JSON.parse(jsonStr); }
-        catch (err) {
-          console.error("[HealthSync] JSON.parse failed:", err.message);
-          if (!silent) showToast("Failed to parse health data");
-          return;
-        }
-        console.log("[HealthSync] Parsed", Object.keys(healthData).length, "dates");
-
-        const data = getStats();
-        if (!data.entries) data.entries = [];
-
-        // Build set of dates that already have manual entries
-        const manualDates = new Set(
-          data.entries.filter((e) => e.source !== "apple_health").map((e) => e.date)
-        );
-
-        let imported = 0;
-        // Build set of existing apple_health dates to avoid duplicates
-        const healthDates = new Set(
-          data.entries.filter((e) => e.source === "apple_health").map((e) => e.date)
-        );
-
-        for (const [date, vals] of Object.entries(healthData)) {
-          // Never overwrite manual entries
-          if (manualDates.has(date)) continue;
-          // Update existing health entry or create new
-          if (healthDates.has(date)) {
-            const idx = data.entries.findIndex((e) => e.date === date && e.source === "apple_health");
-            if (idx > -1) {
-              data.entries[idx] = { ...data.entries[idx], ...buildHealthEntry(date, vals) };
-              imported++;
-            }
-          } else {
-            data.entries.push(buildHealthEntry(date, vals));
-            imported++;
+        refreshHealthFromServer(silent).then(function (count) {
+          if (count > 0 && !silent) {
+            showToast("Synced " + count + " entries from Apple Health");
           }
-        }
-
-        data._lastHealthSync = new Date().toISOString();
-        saveStats(data);
-        console.log("[HealthSync] Saved", data.entries.length, "total entries, imported", imported, "new");
-        if (imported > 0 || !silent) {
-          showToast(`Synced ${imported} entries from Apple Health`);
-        }
-        // Always re-render dashboard with fresh data
-        if (document.getElementById("panel-dashboard")?.classList.contains("on")) {
-          renderDashboard();
-        }
+          if (document.getElementById("panel-dashboard")?.classList.contains("on")) {
+            renderDashboard();
+          }
+          updateLastSyncDisplay();
+        });
       }
 
       function buildHealthEntry(date, vals) {
@@ -7350,10 +7343,9 @@ All cycle percentages based on this number.`,
       }
 
       function updateLastSyncDisplay() {
-        const data = getStats();
         const el = document.getElementById("stats-last-sync");
-        if (data._lastHealthSync) {
-          const d = new Date(data._lastHealthSync);
+        if (_serverHealthTimestamp) {
+          const d = new Date(_serverHealthTimestamp);
           el.textContent = "Last synced: " + d.toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
         } else {
           el.textContent = "";
@@ -7364,16 +7356,14 @@ All cycle percentages based on this number.`,
         console.log("[HealthSync] checkHealthUrlParam — search:", window.location.search);
         const params = new URLSearchParams(window.location.search);
 
-        // New approach: ?healthsync=1 triggers a fetch from /api/latest-health
         if (params.get("healthsync") === "1") {
-          console.log("[HealthSync] healthsync=1 detected, fetching data...");
-          // Strip param immediately so refreshes don't re-trigger
+          console.log("[HealthSync] healthsync=1 detected, fetching from server...");
           history.replaceState(null, "", window.location.pathname + window.location.hash);
           fetchAndImportHealth();
           return;
         }
 
-        // Legacy: ?data= param (direct JSON in URL)
+        // Legacy: ?data= param (direct JSON in URL) — load into memory cache
         const dataParam = params.get("data");
         if (dataParam) {
           console.log("[HealthSync] Legacy data= param, length:", dataParam.length);
@@ -7383,9 +7373,17 @@ All cycle percentages based on this number.`,
             try { jsonStr = decodeURIComponent(jsonStr); } catch {}
           }
           try {
-            importHealthData(jsonStr);
+            const healthData = JSON.parse(jsonStr);
+            for (const [date, vals] of Object.entries(healthData)) {
+              _serverHealthEntries.push(buildHealthEntry(date, vals));
+            }
+            _serverHealthTimestamp = new Date().toISOString();
+            showToast("Synced " + Object.keys(healthData).length + " entries from Apple Health");
+            if (document.getElementById("panel-dashboard")?.classList.contains("on")) {
+              renderDashboard();
+            }
           } catch (err) {
-            console.error("[HealthSync] Import error:", err);
+            console.error("[HealthSync] Legacy import error:", err);
             showToast("Error importing health data");
           }
         }
@@ -7401,6 +7399,12 @@ All cycle percentages based on this number.`,
       buildList();
       render();
       renderDashboard();
+      // Fetch health data from server on load (works across Safari & Web Clip)
+      refreshHealthFromServer(true).then(function () {
+        if (document.getElementById("panel-dashboard")?.classList.contains("on")) {
+          renderDashboard();
+        }
+      });
       checkHealthUrlParam();
 
       // Day card click → open modal (event delegation)
