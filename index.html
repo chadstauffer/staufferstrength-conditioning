@@ -1,4 +1,4 @@
-<!-- v20260323-002 -->
+<!-- v20260323-003 -->
 <!doctype html>
 <html lang="en">
   <head>
@@ -5630,12 +5630,8 @@ All cycle percentages based on this number.`,
       }
 
       function renderDashboard() {
-        dashLog('renderDashboard CALLED, Chart=' + (typeof Chart));
-        if (typeof Chart === "undefined") {
-          dashLog('Chart.js NOT LOADED, retrying in 200ms');
-          setTimeout(renderDashboard, 200);
-          return;
-        }
+        var chartReady = typeof Chart !== "undefined";
+        dashLog('renderDashboard CALLED, Chart=' + (chartReady ? 'ready' : 'NOT LOADED'));
         // If server data hasn't arrived yet, schedule a re-render
         if (!window._serverHealthEntries || window._serverHealthEntries.length === 0) {
           dashLog('no server data yet, retry in 1.5s');
@@ -5643,7 +5639,7 @@ All cycle percentages based on this number.`,
         }
         dashLog('renderDashboard START, server=' + (window._serverHealthEntries?.length || 0));
         try {
-        destroyAllDash();
+        if (chartReady) destroyAllDash();
         const logs = gl();
         const lks = Object.keys(logs);
         const schedMap = getSchedule();
@@ -5776,8 +5772,8 @@ All cycle percentages based on this number.`,
           });
           metricsEl.innerHTML = metricsHtml;
 
-          // Render sparklines
-          metricDefs.forEach((def, mi) => {
+          // Render sparklines (requires Chart.js)
+          if (chartReady) metricDefs.forEach((def, mi) => {
             const withVal = allEntries.filter((e) => e[def.key] != null);
             const last7 = withVal.slice(-7);
             if (last7.length < 2) return;
@@ -5812,6 +5808,7 @@ All cycle percentages based on this number.`,
         // S3 — BODY WEIGHT TREND
         // ═══════════════════════════════════════
         dashLog('S3 weight start');
+        if (!chartReady) { dashLog('S3 skipped (no Chart.js)'); } else {
         destroyDash("bw");
         const bwBanner = document.getElementById("dash-bw-banner");
         const bwWithWeight = allEntries.filter((e) => e.weight);
@@ -5900,12 +5897,14 @@ All cycle percentages based on this number.`,
           }
         }
 
+        } // end S3 chartReady
         dashLog('S3 weight done');
 
         // ═══════════════════════════════════════
         // S4 — WOD COMPLETION RING + STREAKS
         // ═══════════════════════════════════════
         dashLog('S4 completion start');
+        if (!chartReady) { dashLog('S4 skipped (no Chart.js)'); } else {
         let done = 0, missed = 0, skipped = 0, total = 0;
         W.forEach((wk) => {
           wk.days.forEach((day) => {
@@ -5971,9 +5970,11 @@ All cycle percentages based on this number.`,
           `<div class="dash-streak-card"><div class="dash-streak-num" style="color:var(--ac2)">${FLAME_SVG}${longestStreak}</div><div class="dash-streak-sub">Longest Streak</div></div>`;
 
         // ═══════════════════════════════════════
+        } // end S4 chartReady
         dashLog('S4 completion done');
         // S5 — TRAINING VS RECOVERY CORRELATION
         dashLog('S5 correlation start');
+        if (!chartReady) { dashLog('S5 skipped (no Chart.js)'); } else {
         // ═══════════════════════════════════════
         destroyDash("corr");
         const corrWrap = document.getElementById("dash-corr-wrap");
@@ -6067,8 +6068,19 @@ All cycle percentages based on this number.`,
           corrWrap.querySelectorAll(".dash-corr-empty").forEach((el) => el.remove());
           corrWrap.insertAdjacentHTML("beforeend", '<div class="dash-corr-empty">Complete more workouts and sync Apple Health to unlock this chart<br>Needs at least 10 matched WOD + next-day HRV data points</div>');
         }
+        } // end S5 chartReady
         dashLog('S5 correlation done');
         dashLog('renderDashboard END');
+        // If Chart.js loaded late, re-render to add charts
+        if (!chartReady) {
+          dashLog('scheduling chart retry...');
+          setTimeout(function() {
+            if (typeof Chart !== "undefined") {
+              dashLog('Chart.js now available, re-rendering for charts');
+              renderDashboard();
+            }
+          }, 2000);
+        }
         } catch (dashErr) {
           dashLog('ERROR render: ' + dashErr.message + '\n' + dashErr.stack);
         }
