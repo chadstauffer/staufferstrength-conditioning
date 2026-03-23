@@ -5557,6 +5557,10 @@ All cycle percentages based on this number.`,
           setTimeout(renderDashboard, 200);
           return;
         }
+        const _dbgStats = getStats();
+        console.log('[Dashboard] entries:', _dbgStats?.entries?.length);
+        console.log('[Dashboard] first entry:', JSON.stringify(_dbgStats?.entries?.[0]));
+        console.log('[Dashboard] last entry:', JSON.stringify(_dbgStats?.entries?.[_dbgStats?.entries?.length - 1]));
         destroyAllDash();
         const logs = gl();
         const lks = Object.keys(logs);
@@ -5715,6 +5719,15 @@ All cycle percentages based on this number.`,
         const goal = statsData._goal || null;
 
         if (bwWithWeight.length >= 1) {
+          // Ensure canvas exists and is visible (may have been hidden by empty state)
+          const bwWrapEl = document.getElementById("dash-bw")?.parentElement;
+          if (bwWrapEl) {
+            bwWrapEl.querySelectorAll(".dash-empty").forEach((el) => el.remove());
+            if (!document.getElementById("dash-bw")) {
+              bwWrapEl.innerHTML = '<canvas id="dash-bw"></canvas>';
+            }
+            document.getElementById("dash-bw").style.display = "";
+          }
           const first = bwWithWeight[0].weight;
           const last = bwWithWeight[bwWithWeight.length - 1].weight;
           const delta = +(last - first).toFixed(1);
@@ -5775,7 +5788,17 @@ All cycle percentages based on this number.`,
           });
         } else {
           bwBanner.innerHTML = "";
-          document.getElementById("dash-bw").parentElement.innerHTML = '<div class="dash-empty">Step on your scale and tap Sync Apple Health to get started</div>';
+          const bwWrap = document.getElementById("dash-bw")?.parentElement;
+          if (bwWrap) {
+            // Preserve the canvas so re-renders can use it
+            if (!bwWrap.querySelector("#dash-bw")) {
+              bwWrap.innerHTML = '<canvas id="dash-bw"></canvas>';
+            }
+            document.getElementById("dash-bw").style.display = "none";
+            // Remove any previous empty message
+            bwWrap.querySelectorAll(".dash-empty").forEach((el) => el.remove());
+            bwWrap.insertAdjacentHTML("beforeend", '<div class="dash-empty">Step on your scale and tap Sync Apple Health to get started</div>');
+          }
         }
 
         // ═══════════════════════════════════════
@@ -5893,10 +5916,12 @@ All cycle percentages based on this number.`,
         }
 
         if (corrPoints.length >= 10) {
-          // Ensure canvas exists
-          if (!corrWrap.querySelector("canvas")) {
+          // Ensure canvas exists and is visible
+          if (!corrWrap.querySelector("#dash-corr")) {
             corrWrap.innerHTML = '<canvas id="dash-corr"></canvas>';
           }
+          corrWrap.querySelectorAll(".dash-corr-empty").forEach((el) => el.remove());
+          document.getElementById("dash-corr").style.display = "";
           _dashCharts.corr = new Chart(document.getElementById("dash-corr"), {
             type: "scatter",
             data: {
@@ -5930,7 +5955,13 @@ All cycle percentages based on this number.`,
             }
           });
         } else {
-          corrWrap.innerHTML = '<div class="dash-corr-empty">Complete more workouts and sync Apple Health to unlock this chart<br>Needs at least 10 matched WOD + next-day HRV data points</div>';
+          // Preserve canvas, hide it, show empty message
+          if (!corrWrap.querySelector("#dash-corr")) {
+            corrWrap.innerHTML = '<canvas id="dash-corr"></canvas>';
+          }
+          document.getElementById("dash-corr").style.display = "none";
+          corrWrap.querySelectorAll(".dash-corr-empty").forEach((el) => el.remove());
+          corrWrap.insertAdjacentHTML("beforeend", '<div class="dash-corr-empty">Complete more workouts and sync Apple Health to unlock this chart<br>Needs at least 10 matched WOD + next-day HRV data points</div>');
         }
       }
 
@@ -7304,15 +7335,15 @@ All cycle percentages based on this number.`,
       function buildHealthEntry(date, vals) {
         return {
           date,
-          weight: vals.weight || null,
-          bf: vals.bodyFat || null,
-          restingHR: vals.restingHR || null,
-          heartRate: vals.heartRate || null,
-          activeCalories: vals.activeCalories || null,
-          sleep: vals.sleep || null,
-          vo2max: vals.vo2max || null,
-          hrv: vals.hrv || null,
-          steps: vals.steps || null,
+          weight: vals.weight ?? null,
+          bf: vals.bodyFat ?? null,
+          restingHR: vals.restingHR ?? null,
+          heartRate: vals.heartRate ?? null,
+          activeCalories: vals.activeCalories ?? null,
+          sleep: vals.sleep ?? null,
+          vo2max: vals.vo2max ?? null,
+          hrv: vals.hrv ?? null,
+          steps: vals.steps ?? null,
           notes: null,
           source: "apple_health",
         };
