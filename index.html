@@ -5552,23 +5552,23 @@ All cycle percentages based on this number.`,
       const FLAME_SVG = '<svg class="dash-streak-icon" width="14" height="18" viewBox="0 0 14 18"><path d="M7 0C7 0 3 5 3 9a4 4 0 0 0 8 0c0-4-4-9-4-9zM7 14a2 2 0 0 1-2-2c0-1.1.9-2.5 2-4 1.1 1.5 2 2.9 2 4a2 2 0 0 1-2 2z" fill="currentColor"/></svg>';
 
       // ── Server-side health data cache (replaces localStorage for health) ──
-      let _serverHealthEntries = [];
-      let _serverHealthTimestamp = null;
+      window._serverHealthEntries = [];
+      window._serverHealthTimestamp = null;
 
       function refreshHealthFromServer(silent) {
         return fetch("https://staufferstrength-conditioning.vercel.app/api/latest-health", { cache: "no-store" })
           .then(function (r) { return r.json(); })
           .then(function (json) {
             if (json.data && Object.keys(json.data).length > 0) {
-              _serverHealthEntries = [];
+              window._serverHealthEntries = [];
               for (var _d in json.data) {
                 if (json.data.hasOwnProperty(_d)) {
-                  _serverHealthEntries.push(buildHealthEntry(_d, json.data[_d]));
+                  window._serverHealthEntries.push(buildHealthEntry(_d, json.data[_d]));
                 }
               }
-              _serverHealthTimestamp = json.timestamp || new Date().toISOString();
-              console.log("[HealthSync] Fetched", _serverHealthEntries.length, "entries from server");
-              return _serverHealthEntries.length;
+              window._serverHealthTimestamp = json.timestamp || new Date().toISOString();
+              console.log("[HealthSync] Fetched", window._serverHealthEntries.length, "entries from server");
+              return window._serverHealthEntries.length;
             }
             if (!silent) showToast("No health data available — run your Apple Health Shortcut first");
             return 0;
@@ -5586,8 +5586,8 @@ All cycle percentages based on this number.`,
         var manualEntries = (statsData.entries || []).filter(function (e) { return e.source !== "apple_health"; });
         var byDate = {};
         // Health entries first (lower priority)
-        for (var i = 0; i < _serverHealthEntries.length; i++) {
-          var e = _serverHealthEntries[i];
+        for (var i = 0; i < window._serverHealthEntries.length; i++) {
+          var e = window._serverHealthEntries[i];
           byDate[e.date] = Object.assign({}, e);
         }
         // Manual entries override (higher priority — user-entered data wins)
@@ -5617,13 +5617,13 @@ All cycle percentages based on this number.`,
         const allEntries = getMergedEntries().sort((a, b) => a.date.localeCompare(b.date));
         const hasEntries = allEntries.length >= 3;
 
-        console.log('[Dashboard] server entries:', _serverHealthEntries.length, '| merged entries:', allEntries.length);
+        console.log('[Dashboard] server entries:', window._serverHealthEntries.length, '| merged entries:', allEntries.length);
         if (allEntries.length > 0) console.log('[Dashboard] first:', JSON.stringify(allEntries[0]), '| last:', JSON.stringify(allEntries[allEntries.length - 1]));
 
         // Last sync
         const syncEl = document.getElementById("dash-last-sync");
-        if (_serverHealthTimestamp) {
-          const sd = new Date(_serverHealthTimestamp);
+        if (window._serverHealthTimestamp) {
+          const sd = new Date(window._serverHealthTimestamp);
           syncEl.textContent = "Last synced: " + sd.toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
         } else { syncEl.textContent = ""; }
 
@@ -7344,8 +7344,8 @@ All cycle percentages based on this number.`,
 
       function updateLastSyncDisplay() {
         const el = document.getElementById("stats-last-sync");
-        if (_serverHealthTimestamp) {
-          const d = new Date(_serverHealthTimestamp);
+        if (window._serverHealthTimestamp) {
+          const d = new Date(window._serverHealthTimestamp);
           el.textContent = "Last synced: " + d.toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
         } else {
           el.textContent = "";
@@ -7375,9 +7375,9 @@ All cycle percentages based on this number.`,
           try {
             const healthData = JSON.parse(jsonStr);
             for (const [date, vals] of Object.entries(healthData)) {
-              _serverHealthEntries.push(buildHealthEntry(date, vals));
+              window._serverHealthEntries.push(buildHealthEntry(date, vals));
             }
-            _serverHealthTimestamp = new Date().toISOString();
+            window._serverHealthTimestamp = new Date().toISOString();
             showToast("Synced " + Object.keys(healthData).length + " entries from Apple Health");
             if (document.getElementById("panel-dashboard")?.classList.contains("on")) {
               renderDashboard();
